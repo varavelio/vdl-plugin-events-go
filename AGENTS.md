@@ -21,3 +21,7 @@ When updating this document, do so with the context of the entire document in mi
 - Keep implementations aligned with SDK patterns from the manual.
 - Use the SDK utility functions when possible to avoid duplicating code.
 - `e2e/` this directory contains end to end tests. Recommended structure: one fixture folder per test.
+- Prefer explicit e2e assertions over full-file snapshots because VDL prepends generated headers that change when the bundled plugin hash changes.
+- This plugin only emits Go event artifacts for types annotated with `@event`; unannotated types are ignored.
+- Generated output is consolidated into a single `events.gen.go` file and depends on the plugin `package` option for the Go package name.
+- Validate `@event` placeholders against top-level primitive payload fields before emitting files so invalid schemas fail with plugin diagnostics.
