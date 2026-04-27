@@ -170,11 +170,16 @@ describe("generate", () => {
     expect(file.path).toBe("events.go");
     expect(file.content).toContain("package audit");
     expect(file.content).toContain(
-      "// EventMetadata describes a generated event contract.",
+      "// VDLEventMetadataItem describes one generated event contract.",
     );
     expect(file.content).toContain(
-      "// EventCatalog indexes generated events by payload type name.",
+      "// VDLEventMetadata groups generated event metadata by payload type name.",
     );
+    expect(file.content).toContain("type VDLEventMetadataItem struct {");
+    expect(file.content).toContain("type VDLEventMetadata struct {");
+    expect(file.content).toContain("var VDLEventCatalog = VDLEventMetadata{");
+    expect(file.content).toContain("UserCreatedEvent VDLEventMetadataItem");
+    expect(file.content).toContain("UserCreatedEvent: VDLEventMetadataItem{");
     expect(file.content).toContain(
       "// UserCreatedEvent is the payload generated for this event.",
     );

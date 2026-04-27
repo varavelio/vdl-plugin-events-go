@@ -73,18 +73,29 @@ function collectImports(events: EventModel[], allTypes: TypeDef[]): string[] {
  */
 function renderCatalog(events: EventModel[]): string[] {
   const lines = [
-    "// EventMetadata describes a generated event contract.",
-    "type EventMetadata struct {",
+    "// VDLEventMetadataItem describes one generated event contract.",
+    "type VDLEventMetadataItem struct {",
     "\tName string",
     "\tSubject string",
     "}",
     "",
-    "// EventCatalog indexes generated events by payload type name.",
-    "var EventCatalog = map[string]EventMetadata{",
+    "// VDLEventMetadata groups generated event metadata by payload type name.",
+    "type VDLEventMetadata struct {",
   ];
 
   for (const event of events) {
-    lines.push(`\t"${event.name}": {`);
+    lines.push(`\t${event.name} VDLEventMetadataItem`);
+  }
+
+  lines.push(
+    "}",
+    "",
+    "// VDLEventCatalog indexes generated events by payload type name.",
+    "var VDLEventCatalog = VDLEventMetadata{",
+  );
+
+  for (const event of events) {
+    lines.push(`\t${event.name}: VDLEventMetadataItem{`);
     lines.push(`\t\tName: "${event.name}",`);
     lines.push(`\t\tSubject: "${event.subject}",`);
     lines.push("\t},");

@@ -124,8 +124,9 @@ For each annotated event, the plugin generates:
 
 It also generates shared runtime metadata:
 
-- `EventMetadata`
-- `EventCatalog`
+- `VDLEventMetadataItem`
+- `VDLEventMetadata`
+- `VDLEventCatalog`
 
 All generated events are consolidated into a single Go file.
 
