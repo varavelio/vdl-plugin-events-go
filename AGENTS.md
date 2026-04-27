@@ -23,5 +23,6 @@ When updating this document, do so with the context of the entire document in mi
 - `e2e/` this directory contains end to end tests. Recommended structure: one fixture folder per test.
 - Prefer explicit e2e assertions over full-file snapshots because VDL prepends generated headers that change when the bundled plugin hash changes.
 - This plugin only emits Go event artifacts for types annotated with `@event`; unannotated types are ignored.
-- Generated output is consolidated into a single `events.gen.go` file and depends on the plugin `package` option for the Go package name.
+- Generated output is consolidated into a single Go file, defaults to `events.go`, and can be renamed through the `outFile` option when it still ends in `.go`.
 - Validate `@event` placeholders against top-level primitive payload fields before emitting files so invalid schemas fail with plugin diagnostics.
+- E2E fixtures should run `go build ./gen` after generation so the generated Go output is compile-checked, not just string-checked.
