@@ -1,3 +1,0 @@
-// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
-
-exports[`VDL Plugin: end-to-end tests > compiles fixture: simpletest > hello.txt 1`] = `"Hello from VDL Plugin"`;

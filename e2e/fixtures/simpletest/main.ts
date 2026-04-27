@@ -1,13 +1,26 @@
 import { ok } from "node:assert";
 import { readFileSync } from "node:fs";
 
-// This file is only a tiny example of extra fixture checks.
-// Keep files like this small and focused.
+const generated = readFileSync("gen/events.gen.go", "utf-8");
 
-const helloTxtGot = readFileSync("gen/hello.txt", "utf-8");
-const helloTxtExpected = "Hello from VDL Plugin";
-
+ok(generated.includes("package gen"), "missing package declaration");
 ok(
-  helloTxtGot === helloTxtExpected,
-  `hello.txt content mismatch. Expected: "${helloTxtExpected}", got: "${helloTxtGot}"`,
+  generated.includes("type UserCreatedEvent struct {"),
+  "missing event struct",
+);
+ok(
+  generated.includes(
+    "func BuildUserCreatedEventSubject(userId string) string {",
+  ),
+  "missing subject builder",
+);
+ok(
+  generated.includes(
+    "// BuildUserCreatedEventSubject builds the routing subject for UserCreatedEvent.",
+  ),
+  "missing builder comment",
+);
+ok(
+  generated.includes('Subject: "auth.user_created.{userId}",'),
+  "missing event catalog subject",
 );

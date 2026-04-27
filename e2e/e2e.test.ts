@@ -23,13 +23,19 @@ describe("VDL Plugin: end-to-end tests", () => {
 
     // Read generated files in a stable order.
     const generatedFiles = readdirSync(outDir).sort();
-    expect(generatedFiles.length).toBeGreaterThan(0);
+    expect(generatedFiles).toEqual(["events.gen.go"]);
 
-    // Snapshot checks are optional, but this is a good pattern to keep.
-    for (const file of generatedFiles) {
-      const content = readFileSync(join(outDir, file), "utf-8");
-      expect(content).toMatchSnapshot(file);
-    }
+    const generated = readFileSync(join(outDir, "events.gen.go"), "utf-8");
+    expect(generated).toContain("package gen");
+    expect(generated).toContain(
+      "// EventMetadata describes a generated event contract.",
+    );
+    expect(generated).toContain(
+      "// UserCreatedEvent is the payload for the auth.user_created.{userId} event.",
+    );
+    expect(generated).toContain(
+      "// BuildUserCreatedEventSubject builds the routing subject for UserCreatedEvent.",
+    );
 
     // Put small extra checks in `main.ts` when a fixture needs them.
     // If you need to check something in other languages, you can
