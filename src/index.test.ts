@@ -26,7 +26,7 @@ function createEventAnnotation(subject?: string) {
 }
 
 function generateFromSchema(
-  options: { package?: string } = {},
+  options: { package?: string; outFile?: string } = {},
   schemaInput = schema(),
 ) {
   return generate(
@@ -84,6 +84,60 @@ describe("generate", () => {
     expect(file.content).toContain("package events");
   });
 
+  it("uses events.go as the default output filename", () => {
+    const output = generateFromSchema(
+      {},
+      schema({
+        types: [
+          typeDef(
+            "HealthcheckEvent",
+            objectType([field("service", primitiveType("string"))]),
+            { annotations: [createEventAnnotation("healthcheck.ok")] },
+          ),
+        ],
+      }),
+    );
+
+    const file = getOnlyGeneratedFile(output);
+    expect(file.path).toBe("events.go");
+  });
+
+  it("uses a custom outFile when it ends with .go", () => {
+    const output = generateFromSchema(
+      { outFile: "custom-events.go" },
+      schema({
+        types: [
+          typeDef(
+            "HealthcheckEvent",
+            objectType([field("service", primitiveType("string"))]),
+            { annotations: [createEventAnnotation("healthcheck.ok")] },
+          ),
+        ],
+      }),
+    );
+
+    const file = getOnlyGeneratedFile(output);
+    expect(file.path).toBe("custom-events.go");
+  });
+
+  it("falls back to events.go when outFile is blank", () => {
+    const output = generateFromSchema(
+      { outFile: "   " },
+      schema({
+        types: [
+          typeDef(
+            "HealthcheckEvent",
+            objectType([field("service", primitiveType("string"))]),
+            { annotations: [createEventAnnotation("healthcheck.ok")] },
+          ),
+        ],
+      }),
+    );
+
+    const file = getOnlyGeneratedFile(output);
+    expect(file.path).toBe("events.go");
+  });
+
   it("generates a single documented Go file for annotated events only", () => {
     const output = generateFromSchema(
       { package: "audit" },
@@ -113,7 +167,7 @@ describe("generate", () => {
     expect(output.errors).toBeUndefined();
 
     const file = getOnlyGeneratedFile(output);
-    expect(file.path).toBe("events.gen.go");
+    expect(file.path).toBe("events.go");
     expect(file.content).toContain("package audit");
     expect(file.content).toContain(
       "// EventMetadata describes a generated event contract.",
@@ -244,9 +298,9 @@ describe("generate", () => {
     );
 
     const file = getOnlyGeneratedFile(output);
-    expect(file.content).toContain('TenantId TenantID `json:"tenantId"`');
+    expect(file.content).toContain('TenantId string `json:"tenantId"`');
     expect(file.content).toContain(
-      "func BuildTenantCreatedEventSubject(tenantId TenantID) string {",
+      "func BuildTenantCreatedEventSubject(tenantId string) string {",
     );
     expect(file.content).toContain('return "tenants." + tenantId + ".created"');
   });
@@ -286,7 +340,7 @@ describe("generate", () => {
     );
 
     const file = getOnlyGeneratedFile(output);
-    expect(file.content).toContain('ActorId ActorID `json:"actorId"`');
+    expect(file.content).toContain('ActorId int64 `json:"actorId"`');
     expect(file.content).toContain('Tags []string `json:"tags"`');
     expect(file.content).toContain(
       'Attributes map[string]bool `json:"attributes"`',
@@ -356,6 +410,27 @@ describe("generate", () => {
     expect(output.errors).toHaveLength(1);
     expect(output.errors?.[0]?.message).toContain(
       "must use a string literal subject",
+    );
+  });
+
+  it("returns a diagnostic when outFile does not end with .go", () => {
+    const output = generateFromSchema(
+      { outFile: "events.txt" },
+      schema({
+        types: [
+          typeDef(
+            "HealthcheckEvent",
+            objectType([field("service", primitiveType("string"))]),
+            { annotations: [createEventAnnotation("healthcheck.ok")] },
+          ),
+        ],
+      }),
+    );
+
+    expect(output.files).toEqual([]);
+    expect(output.errors).toHaveLength(1);
+    expect(output.errors?.[0]?.message).toContain(
+      'Invalid outFile "events.txt"',
     );
   });
 
