@@ -92,7 +92,11 @@ const config = {
 
 ## Event Annotation Model
 
-This plugin follows the VDL event annotation model:
+This plugin follows the VDL `@event` specification:
+
+- Spec: https://github.com/varavelio/vdl/blob/c1b8080201d87a329c0d307ead963d6e2659e5b7/docs/reference/events.md
+
+Core rules enforced by this plugin:
 
 - `@event("subject.template")` must be attached to a top-level object type
 - placeholders use `{fieldName}` syntax
