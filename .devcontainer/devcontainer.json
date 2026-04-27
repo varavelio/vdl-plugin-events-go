@@ -1,0 +1,36 @@
+{
+  "build": {
+    "dockerfile": "./Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "root",
+  "mounts": [
+    "source=${localEnv:HOME}/.claude,target=/root/.claude,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.config/opencode,target=/root/.config/opencode,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.local/share/opencode,target=/root/.local/share/opencode,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "varavel.vdl",
+        "dprint.dprint",
+        "biomejs.biome",
+        "vitest.explorer"
+      ],
+      "settings": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "dprint.dprint",
+        "editor.codeActionsOnSave": {
+          "source.fixAll.biome": "explicit"
+        },
+        "[javascript]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "biomejs.biome"
+        }
+      }
+    }
+  }
+}

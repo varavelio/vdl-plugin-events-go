@@ -1,0 +1,21 @@
+// Small example schema for the template e2e test.
+// Keep fixture schemas simple and easy to read.
+
+type FooType {
+  firstField string
+  secondField int[]
+}
+
+@rpc
+type MyRpc {
+  @proc
+  barProc {
+    input {
+      foo FooType
+    }
+
+    output {
+      baz bool
+    }
+  }
+}

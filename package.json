@@ -1,0 +1,30 @@
+{
+  "name": "@varavel/vdl-plugin-template",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "build": "vdl-plugin build",
+    "check": "vdl-plugin check",
+    "format": "npm run format:dprint && npm run format:biome",
+    "format:dprint": "dprint fmt --config ./dprint.json --log-level warn",
+    "format:biome": "biome format --write --config-path ./biome.json --log-level warn --no-errors-on-unmatched .",
+    "lint": "npm run lint:dprint && npm run lint:biome",
+    "lint:dprint": "dprint check --config ./dprint.json --log-level warn",
+    "lint:biome": "biome check --config-path ./biome.json --log-level warn --no-errors-on-unmatched .",
+    "test": "npm run test:unit && npm run test:e2e",
+    "test:unit": "vitest run --passWithNoTests --config ./vitest.config.ts ./src",
+    "test:e2e": "vitest run --passWithNoTests --config ./vitest.config.ts ./e2e",
+    "ci": "npm run build && npm run lint && npm run check && npm run test"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "2.4.12",
+    "@types/node": "25.4.0",
+    "@varavel/gen": "0.1.0",
+    "@varavel/vdl": "0.5.0-alpha.5",
+    "@varavel/vdl-plugin-sdk": "0.5.6",
+    "dprint": "0.54.0",
+    "typescript": "5.9.3",
+    "vitest": "4.1.5"
+  }
+}
