@@ -10,7 +10,10 @@ export function renderGoType(
   optional: boolean,
   allTypes: TypeDef[],
 ): string {
-  const rendered = renderRequiredGoType(typeRef, allTypes);
+  const rendered = renderRequiredGoType(
+    resolveType(typeRef, allTypes),
+    allTypes,
+  );
   return optional ? `*${rendered}` : rendered;
 }
 
