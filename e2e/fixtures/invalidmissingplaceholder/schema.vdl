@@ -1,0 +1,4 @@
+@event("auth.user_created.{tenantId}")
+type UserCreatedEvent {
+  userId string
+}

@@ -1,0 +1,4 @@
+@event("system.ready")
+type SystemReadyEvent {
+  message string
+}

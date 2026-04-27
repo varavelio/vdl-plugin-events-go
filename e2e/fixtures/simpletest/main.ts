@@ -1,7 +1,9 @@
 import { ok } from "node:assert";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
-const generated = readFileSync("gen/events.gen.go", "utf-8");
+ok(existsSync("gen/events.go"), "expected default events.go output file");
+
+const generated = readFileSync("gen/events.go", "utf-8");
 
 ok(generated.includes("package gen"), "missing package declaration");
 ok(
@@ -23,4 +25,8 @@ ok(
 ok(
   generated.includes('Subject: "auth.user_created.{userId}",'),
   "missing event catalog subject",
+);
+ok(
+  !generated.includes("type IgnoredType struct {"),
+  "unannotated types must be ignored",
 );

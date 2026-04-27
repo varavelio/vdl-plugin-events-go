@@ -1,0 +1,17 @@
+enum Status {
+  Pending = "pending"
+}
+
+type ActorId int
+
+@event("audit.{tenantId}.payload.created")
+type ComplexPayloadEvent {
+  tenantId string
+  actorId ActorId
+  tags string[]
+  attributes map[bool]
+  status Status
+  details {
+    ip string
+  }
+}

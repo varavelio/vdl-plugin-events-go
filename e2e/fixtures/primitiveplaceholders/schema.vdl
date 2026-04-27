@@ -1,0 +1,8 @@
+@event("metrics.{name}.{count}.{amount}.{active}.{occurredAt}")
+type PrimitiveSubjectEvent {
+  name string
+  count int
+  amount float
+  active bool
+  occurredAt datetime
+}

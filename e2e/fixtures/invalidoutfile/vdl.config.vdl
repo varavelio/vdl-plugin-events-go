@@ -1,6 +1,3 @@
-// Small example fixture config.
-// Keep one config like this per fixture.
-
 const config = {
   version 1
   plugins [
@@ -10,6 +7,7 @@ const config = {
       outDir "./gen"
       options {
         package "gen"
+        outFile "events.txt"
       }
     }
   ]
