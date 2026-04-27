@@ -1,46 +1,64 @@
 import { execSync } from "node:child_process";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it } from "vitest";
 
-// This e2e suite is only a example.
-// Keep this fixture-per-folder shape when you add real e2e tests.
-
-// Each fixture folder is one example project inside `fixtures/`.
 const fixturesDir = resolve(__dirname, "fixtures");
 const fixtures = readdirSync(fixturesDir, { withFileTypes: true })
   .filter((dirent) => dirent.isDirectory())
-  .map((dirent) => dirent.name);
+  .map((dirent) => dirent.name)
+  .sort();
+
+/**
+ * Returns the expected failure message for a fixture when it is intended to fail.
+ */
+function readExpectedError(fixturePath: string): string | null {
+  const errorFile = join(fixturePath, "expect-error.txt");
+  if (!existsSync(errorFile)) {
+    return null;
+  }
+
+  return readFileSync(errorFile, "utf-8").trim();
+}
+
+/**
+ * Removes the fixture output directory to ensure each run starts clean.
+ */
+function resetOutputDir(outDir: string): void {
+  rmSync(outDir, { recursive: true, force: true });
+}
 
 describe("VDL Plugin: end-to-end tests", () => {
-  it.each(fixtures)("compiles fixture: %s", (fixtureName) => {
+  beforeAll(() => {
+    execSync("npm run build", {
+      cwd: resolve(__dirname, ".."),
+      stdio: "pipe",
+    });
+  });
+
+  it.each(fixtures)("executes fixture: %s", (fixtureName) => {
     const fixturePath = join(fixturesDir, fixtureName);
     const outDir = join(fixturePath, "gen");
     const postTestPath = join(fixturePath, "main.ts");
+    const expectedError = readExpectedError(fixturePath);
 
-    // Run VDL here, like a user would run it.
+    resetOutputDir(outDir);
+
+    if (expectedError) {
+      expect(() =>
+        execSync("npx vdl generate", { cwd: fixturePath, stdio: "pipe" }),
+      ).toThrowError(expectedError);
+      expect(existsSync(outDir)).toBe(false);
+      return;
+    }
+
     execSync("npx vdl generate", { cwd: fixturePath, stdio: "pipe" });
 
-    // Read generated files in a stable order.
     const generatedFiles = readdirSync(outDir).sort();
-    expect(generatedFiles).toEqual(["events.gen.go"]);
+    expect(generatedFiles.length).toBeGreaterThan(0);
 
-    const generated = readFileSync(join(outDir, "events.gen.go"), "utf-8");
-    expect(generated).toContain("package gen");
-    expect(generated).toContain(
-      "// EventMetadata describes a generated event contract.",
-    );
-    expect(generated).toContain(
-      "// UserCreatedEvent is the payload for the auth.user_created.{userId} event.",
-    );
-    expect(generated).toContain(
-      "// BuildUserCreatedEventSubject builds the routing subject for UserCreatedEvent.",
-    );
+    execSync("go build ./gen", { cwd: fixturePath, stdio: "pipe" });
 
-    // Put small extra checks in `main.ts` when a fixture needs them.
-    // If you need to check something in other languages, you can
-    // tweak the dev container and add the command to run the test
-    // here.
     if (existsSync(postTestPath)) {
       execSync("node main.ts", { cwd: fixturePath, stdio: "inherit" });
     }
