@@ -99,7 +99,10 @@ function renderCatalog(events: EventModel[]): string[] {
  */
 function renderEventStruct(event: EventModel, allTypes: TypeDef[]): string[] {
   const lines = [
-    `// ${event.name} is the payload for the ${event.subject} event.`,
+    ...renderEventComment(
+      `${event.name} is the payload generated for this event.`,
+      event,
+    ),
     `type ${event.name} struct {`,
   ];
 
@@ -125,10 +128,30 @@ function renderSubjectBuilder(
   });
 
   return [
-    `// Build${event.name}Subject builds the routing subject for ${event.name}.`,
+    ...renderEventComment(
+      `Build${event.name}Subject builds the routing subject for this event.`,
+      event,
+    ),
     `func Build${event.name}Subject(${params.join(", ")}) string {`,
     `\treturn ${renderSubjectParts(event, allTypes).join(" + ")}`,
     "}",
+  ];
+}
+
+/**
+ * Renders a Go doc comment block for one generated event artifact.
+ */
+function renderEventComment(summary: string, event: EventModel): string[] {
+  return [
+    `// ${summary}`,
+    "//",
+    "// Name:",
+    "//",
+    `//\t${event.name}`,
+    "//",
+    "// Subject:",
+    "//",
+    `//\t${event.subject}`,
   ];
 }
 

@@ -176,10 +176,14 @@ describe("generate", () => {
       "// EventCatalog indexes generated events by payload type name.",
     );
     expect(file.content).toContain(
-      "// UserCreatedEvent is the payload for the auth.user_created.{userId} event.",
+      "// UserCreatedEvent is the payload generated for this event.",
     );
+    expect(file.content).toContain("// Name:");
+    expect(file.content).toContain("// Subject:");
+    expect(file.content).toContain("//\tUserCreatedEvent");
+    expect(file.content).toContain("//\tauth.user_created.{userId}");
     expect(file.content).toContain(
-      "// BuildUserCreatedEventSubject builds the routing subject for UserCreatedEvent.",
+      "// BuildUserCreatedEventSubject builds the routing subject for this event.",
     );
     expect(file.content).not.toContain("type IgnoredType struct {");
   });
@@ -202,6 +206,7 @@ describe("generate", () => {
     expect(file.content).toContain(
       "func BuildSystemReadyEventSubject() string {",
     );
+    expect(file.content).toContain("//\tsystem.ready");
     expect(file.content).toContain('return "system.ready"');
     expect(file.content).not.toContain('"fmt"');
     expect(file.content).not.toContain('"time"');
@@ -230,6 +235,9 @@ describe("generate", () => {
     const file = getOnlyGeneratedFile(output);
     expect(file.content).toContain(
       "func BuildTenantAuditEventSubject(tenantId string) string {",
+    );
+    expect(file.content).toContain(
+      "//\taudit.{tenantId}.users.{tenantId}.created",
     );
     expect(file.content).toContain(
       'return "audit." + tenantId + ".users." + tenantId + ".created"',

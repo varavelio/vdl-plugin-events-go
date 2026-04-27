@@ -18,9 +18,15 @@ ok(
 );
 ok(
   generated.includes(
-    "// BuildUserCreatedEventSubject builds the routing subject for UserCreatedEvent.",
+    "// BuildUserCreatedEventSubject builds the routing subject for this event.",
   ),
   "missing builder comment",
+);
+ok(generated.includes("// Name:"), "missing event name label");
+ok(generated.includes("// Subject:"), "missing event subject label");
+ok(
+  generated.includes("//\tauth.user_created.{userId}"),
+  "missing event subject block",
 );
 ok(
   generated.includes('Subject: "auth.user_created.{userId}",'),
