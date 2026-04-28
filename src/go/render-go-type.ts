@@ -1,5 +1,4 @@
 import type { Field, TypeDef, TypeRef } from "@varavel/vdl-plugin-sdk";
-import { pascalCase } from "@varavel/vdl-plugin-sdk/utils/strings";
 import { resolveType } from "../types/type-resolver";
 
 /**
@@ -10,10 +9,7 @@ export function renderGoType(
   optional: boolean,
   allTypes: TypeDef[],
 ): string {
-  const rendered = renderRequiredGoType(
-    resolveType(typeRef, allTypes),
-    allTypes,
-  );
+  const rendered = renderRequiredGoType(resolveType(typeRef, allTypes));
   return optional ? `*${rendered}` : rendered;
 }
 
@@ -22,30 +18,7 @@ export function renderGoType(
  */
 export function typeUsesTime(typeRef: TypeRef, allTypes: TypeDef[]): boolean {
   const resolved = resolveType(typeRef, allTypes);
-
-  switch (resolved.kind) {
-    case "primitive":
-      return resolved.primitiveName === "datetime";
-    case "array":
-      return typeUsesTime(
-        resolved.arrayType ?? { kind: "primitive", primitiveName: "string" },
-        allTypes,
-      );
-    case "map":
-      return typeUsesTime(
-        resolved.mapType ?? { kind: "primitive", primitiveName: "string" },
-        allTypes,
-      );
-    case "object":
-      return (resolved.objectFields ?? []).some((field) =>
-        typeUsesTime(field.typeRef, allTypes),
-      );
-    case "type":
-    case "enum":
-      return false;
-    default:
-      throw new Error(`Unhandled type kind: ${resolved.kind}`);
-  }
+  return resolved.kind === "primitive" && resolved.primitiveName === "datetime";
 }
 
 /**
@@ -82,37 +55,15 @@ export function renderSubjectValue(field: Field, allTypes: TypeDef[]): string {
 /**
  * Renders the non-optional form of a VDL type reference into Go.
  */
-function renderRequiredGoType(typeRef: TypeRef, allTypes: TypeDef[]): string {
+function renderRequiredGoType(typeRef: TypeRef): string {
   switch (typeRef.kind) {
     case "primitive":
       return primitiveToGoType(typeRef.primitiveName ?? "string");
-    case "array":
-      return `${"[]".repeat(typeRef.arrayDims ?? 1)}${renderGoType(typeRef.arrayType ?? { kind: "primitive", primitiveName: "string" }, false, allTypes)}`;
-    case "map":
-      return `map[string]${renderGoType(typeRef.mapType ?? { kind: "primitive", primitiveName: "string" }, false, allTypes)}`;
-    case "object":
-      return renderInlineObjectType(typeRef, allTypes);
-    case "type":
-      return typeRef.typeName ?? "any";
-    case "enum":
-      return renderEnumGoType(typeRef.enumType);
     default:
-      throw new Error(`Unhandled type kind: ${typeRef.kind}`);
+      throw new Error(
+        `Only primitive placeholders are supported, got: ${typeRef.kind}`,
+      );
   }
-}
-
-/**
- * Renders an inline VDL object type into an anonymous Go struct.
- */
-function renderInlineObjectType(typeRef: TypeRef, allTypes: TypeDef[]): string {
-  const lines = ["struct {"];
-  for (const field of typeRef.objectFields ?? []) {
-    lines.push(
-      `\t${pascalCase(field.name)} ${renderGoType(field.typeRef, field.optional, allTypes)} \`json:"${field.name}"\``,
-    );
-  }
-  lines.push("}");
-  return lines.join("\n");
 }
 
 /**
@@ -132,17 +83,5 @@ function primitiveToGoType(name: string): string {
       return "time.Time";
     default:
       return name;
-  }
-}
-
-/**
- * Maps VDL enum storage types to their Go equivalents.
- */
-function renderEnumGoType(enumType: string | undefined): string {
-  switch (enumType) {
-    case "int":
-      return "int64";
-    default:
-      return "string";
   }
 }

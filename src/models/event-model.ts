@@ -4,12 +4,10 @@ import type { Field } from "@varavel/vdl-plugin-sdk";
  * Describes one `@event` declaration after validation and normalization.
  */
 export type EventModel = {
-  /** Payload type name used for the generated Go struct. */
+  /** Payload type name used to name generated event artifacts. */
   name: string;
   /** Literal event subject template from the VDL schema. */
   subject: string;
-  /** Flattened payload fields used to render the Go struct. */
-  fields: Field[];
   /** Ordered subject placeholders resolved against payload fields. */
   placeholders: PlaceholderModel[];
 };

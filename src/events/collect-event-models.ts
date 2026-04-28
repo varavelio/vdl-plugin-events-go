@@ -74,7 +74,6 @@ function toEventModel(
   return {
     name: typeDef.name,
     subject,
-    fields,
     placeholders,
   };
 }
