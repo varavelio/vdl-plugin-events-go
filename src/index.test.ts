@@ -180,9 +180,6 @@ describe("generate", () => {
     expect(file.content).toContain("var VDLEventCatalog = VDLEventMetadata{");
     expect(file.content).toContain("UserCreatedEvent VDLEventMetadataItem");
     expect(file.content).toContain("UserCreatedEvent: VDLEventMetadataItem{");
-    expect(file.content).toContain(
-      "// UserCreatedEvent is the payload generated for this event.",
-    );
     expect(file.content).toContain("// Name:");
     expect(file.content).toContain("// Subject:");
     expect(file.content).toContain("//\tUserCreatedEvent");
@@ -190,6 +187,7 @@ describe("generate", () => {
     expect(file.content).toContain(
       "// BuildUserCreatedEventSubject builds the routing subject for this event.",
     );
+    expect(file.content).not.toContain("type UserCreatedEvent struct {");
     expect(file.content).not.toContain("type IgnoredType struct {");
   });
 
@@ -311,32 +309,24 @@ describe("generate", () => {
     );
 
     const file = getOnlyGeneratedFile(output);
-    expect(file.content).toContain('TenantId string `json:"tenantId"`');
     expect(file.content).toContain(
       "func BuildTenantCreatedEventSubject(tenantId string) string {",
     );
     expect(file.content).toContain('return "tenants." + tenantId + ".created"');
   });
 
-  it("renders complex payload fields such as arrays, maps, enums, inline objects, and named types", () => {
+  it("does not generate payload structs even when events use complex payload fields", () => {
     const output = generateFromSchema(
       { package: "events" },
       schema({
-        enums: [
-          enumDef("Status", "string", [
-            enumMember("Pending", stringLiteral("pending")),
-          ]),
-        ],
         types: [
-          typeDef("ActorID", primitiveType("int")),
           typeDef(
             "ComplexPayloadEvent",
             objectType([
               field("tenantId", primitiveType("string")),
-              field("actorId", namedType("ActorID")),
+              field("actorId", primitiveType("int")),
               field("tags", arrayType(primitiveType("string"))),
-              field("attributes", mapType(primitiveType("bool"))),
-              field("status", enumType("Status", "string")),
+              field("attributes", arrayType(primitiveType("bool"))),
               field(
                 "details",
                 objectType([field("ip", primitiveType("string"))]),
@@ -353,14 +343,12 @@ describe("generate", () => {
     );
 
     const file = getOnlyGeneratedFile(output);
-    expect(file.content).toContain('ActorId int64 `json:"actorId"`');
-    expect(file.content).toContain('Tags []string `json:"tags"`');
     expect(file.content).toContain(
-      'Attributes map[string]bool `json:"attributes"`',
+      "func BuildComplexPayloadEventSubject(tenantId string) string {",
     );
-    expect(file.content).toContain('Status string `json:"status"`');
-    expect(file.content).toContain("Details struct {");
-    expect(file.content).toContain('Ip string `json:"ip"`');
+    expect(file.content).not.toContain("type ComplexPayloadEvent struct {");
+    expect(file.content).not.toContain("ActorId int64");
+    expect(file.content).not.toContain("Details struct {");
   });
 
   it("returns a diagnostic when @event is used on a non-object type", () => {

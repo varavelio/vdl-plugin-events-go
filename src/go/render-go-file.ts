@@ -1,5 +1,4 @@
 import type { TypeDef } from "@varavel/vdl-plugin-sdk";
-import { pascalCase } from "@varavel/vdl-plugin-sdk/utils/strings";
 import { listPlaceholderMatches } from "../events/placeholders";
 import type { EventModel, PlaceholderModel } from "../models/event-model";
 import {
@@ -31,7 +30,6 @@ export function renderGoFile(
   lines.push(...renderCatalog(events), "");
 
   for (const [index, event] of events.entries()) {
-    lines.push(...renderEventStruct(event, allTypes), "");
     lines.push(...renderSubjectBuilder(event, allTypes));
 
     if (index < events.length - 1) {
@@ -54,7 +52,9 @@ function collectImports(events: EventModel[], allTypes: TypeDef[]): string[] {
     ),
   );
   const needsTime = events.some((event) =>
-    event.fields.some((field) => typeUsesTime(field.typeRef, allTypes)),
+    event.placeholders.some((placeholder) =>
+      typeUsesTime(placeholder.field.typeRef, allTypes),
+    ),
   );
 
   if (needsFmt) {
@@ -99,28 +99,6 @@ function renderCatalog(events: EventModel[]): string[] {
     lines.push(`\t\tName: "${event.name}",`);
     lines.push(`\t\tSubject: "${event.subject}",`);
     lines.push("\t},");
-  }
-
-  lines.push("}");
-  return lines;
-}
-
-/**
- * Renders one generated Go payload struct for an event.
- */
-function renderEventStruct(event: EventModel, allTypes: TypeDef[]): string[] {
-  const lines = [
-    ...renderEventComment(
-      `${event.name} is the payload generated for this event.`,
-      event,
-    ),
-    `type ${event.name} struct {`,
-  ];
-
-  for (const field of event.fields) {
-    lines.push(
-      `\t${pascalCase(field.name)} ${renderGoType(field.typeRef, field.optional, allTypes)} \`json:"${field.name}"\``,
-    );
   }
 
   lines.push("}");
