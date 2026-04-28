@@ -7,8 +7,8 @@ const generated = readFileSync("gen/events.go", "utf-8");
 
 ok(generated.includes("package gen"), "missing package declaration");
 ok(
-  generated.includes("type UserCreatedEvent struct {"),
-  "missing event struct",
+  !generated.includes("type UserCreatedEvent struct {"),
+  "event payload structs must not be generated",
 );
 ok(
   generated.includes(
