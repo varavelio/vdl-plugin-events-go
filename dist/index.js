@@ -80,27 +80,6 @@ function getAnnotation(annotations, name) {
 }
 __name(getAnnotation, "getAnnotation");
 
-// node_modules/@varavel/vdl-plugin-sdk/dist/utils/strings/words.js
-var ACRONYM_TO_CAPITALIZED_WORD_BOUNDARY_RE = /([A-Z]+)([A-Z][a-z])/g;
-var LOWERCASE_OR_DIGIT_TO_UPPERCASE_BOUNDARY_RE = /([a-z0-9])([A-Z])/g;
-var NON_ALPHANUMERIC_SEQUENCE_RE = /[^A-Za-z0-9]+/g;
-var WHITESPACE_SEQUENCE_RE = /\s+/;
-function words(str) {
-  const normalized = str.replace(ACRONYM_TO_CAPITALIZED_WORD_BOUNDARY_RE, "$1 $2").replace(LOWERCASE_OR_DIGIT_TO_UPPERCASE_BOUNDARY_RE, "$1 $2").replace(NON_ALPHANUMERIC_SEQUENCE_RE, " ").trim();
-  return normalized.length === 0 ? [] : normalized.split(WHITESPACE_SEQUENCE_RE);
-}
-__name(words, "words");
-
-// node_modules/@varavel/vdl-plugin-sdk/dist/utils/strings/pascal-case.js
-function capitalize(word) {
-  return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
-}
-__name(capitalize, "capitalize");
-function pascalCase(str) {
-  return words(str).map(capitalize).join("");
-}
-__name(pascalCase, "pascalCase");
-
 // node_modules/@varavel/vdl-plugin-sdk/dist/utils/ir/unwrap-literal.js
 function unwrapLiteral(value) {
   return unwrapLiteralValue(value);
@@ -225,7 +204,6 @@ function toEventModel(typeDef, allTypes) {
   return {
     name: typeDef.name,
     subject,
-    fields,
     placeholders
   };
 }
@@ -233,39 +211,13 @@ __name(toEventModel, "toEventModel");
 
 // src/go/render-go-type.ts
 function renderGoType(typeRef, optional, allTypes) {
-  const rendered = renderRequiredGoType(
-    resolveType(typeRef, allTypes),
-    allTypes
-  );
+  const rendered = renderRequiredGoType(resolveType(typeRef, allTypes));
   return optional ? `*${rendered}` : rendered;
 }
 __name(renderGoType, "renderGoType");
 function typeUsesTime(typeRef, allTypes) {
-  var _a2, _b, _c;
   const resolved = resolveType(typeRef, allTypes);
-  switch (resolved.kind) {
-    case "primitive":
-      return resolved.primitiveName === "datetime";
-    case "array":
-      return typeUsesTime(
-        (_a2 = resolved.arrayType) != null ? _a2 : { kind: "primitive", primitiveName: "string" },
-        allTypes
-      );
-    case "map":
-      return typeUsesTime(
-        (_b = resolved.mapType) != null ? _b : { kind: "primitive", primitiveName: "string" },
-        allTypes
-      );
-    case "object":
-      return ((_c = resolved.objectFields) != null ? _c : []).some(
-        (field) => typeUsesTime(field.typeRef, allTypes)
-      );
-    case "type":
-    case "enum":
-      return false;
-    default:
-      throw new Error(`Unhandled type kind: ${resolved.kind}`);
-  }
+  return resolved.kind === "primitive" && resolved.primitiveName === "datetime";
 }
 __name(typeUsesTime, "typeUsesTime");
 function typeNeedsFmtSprint(typeRef, allTypes) {
@@ -284,38 +236,18 @@ function renderSubjectValue(field, allTypes) {
   return `fmt.Sprint(${field.name})`;
 }
 __name(renderSubjectValue, "renderSubjectValue");
-function renderRequiredGoType(typeRef, allTypes) {
-  var _a2, _b, _c, _d, _e;
+function renderRequiredGoType(typeRef) {
+  var _a2;
   switch (typeRef.kind) {
     case "primitive":
       return primitiveToGoType((_a2 = typeRef.primitiveName) != null ? _a2 : "string");
-    case "array":
-      return `${"[]".repeat((_b = typeRef.arrayDims) != null ? _b : 1)}${renderGoType((_c = typeRef.arrayType) != null ? _c : { kind: "primitive", primitiveName: "string" }, false, allTypes)}`;
-    case "map":
-      return `map[string]${renderGoType((_d = typeRef.mapType) != null ? _d : { kind: "primitive", primitiveName: "string" }, false, allTypes)}`;
-    case "object":
-      return renderInlineObjectType(typeRef, allTypes);
-    case "type":
-      return (_e = typeRef.typeName) != null ? _e : "any";
-    case "enum":
-      return renderEnumGoType(typeRef.enumType);
     default:
-      throw new Error(`Unhandled type kind: ${typeRef.kind}`);
+      throw new Error(
+        `Only primitive placeholders are supported, got: ${typeRef.kind}`
+      );
   }
 }
 __name(renderRequiredGoType, "renderRequiredGoType");
-function renderInlineObjectType(typeRef, allTypes) {
-  var _a2;
-  const lines = ["struct {"];
-  for (const field of (_a2 = typeRef.objectFields) != null ? _a2 : []) {
-    lines.push(
-      `	${pascalCase(field.name)} ${renderGoType(field.typeRef, field.optional, allTypes)} \`json:"${field.name}"\``
-    );
-  }
-  lines.push("}");
-  return lines.join("\n");
-}
-__name(renderInlineObjectType, "renderInlineObjectType");
 function primitiveToGoType(name) {
   switch (name) {
     case "string":
@@ -333,15 +265,6 @@ function primitiveToGoType(name) {
   }
 }
 __name(primitiveToGoType, "primitiveToGoType");
-function renderEnumGoType(enumType) {
-  switch (enumType) {
-    case "int":
-      return "int64";
-    default:
-      return "string";
-  }
-}
-__name(renderEnumGoType, "renderEnumGoType");
 
 // src/go/render-go-file.ts
 function renderGoFile(packageName, events, allTypes) {
@@ -356,7 +279,6 @@ function renderGoFile(packageName, events, allTypes) {
   }
   lines.push(...renderCatalog(events), "");
   for (const [index, event] of events.entries()) {
-    lines.push(...renderEventStruct(event, allTypes), "");
     lines.push(...renderSubjectBuilder(event, allTypes));
     if (index < events.length - 1) {
       lines.push("");
@@ -374,7 +296,9 @@ function collectImports(events, allTypes) {
     )
   );
   const needsTime = events.some(
-    (event) => event.fields.some((field) => typeUsesTime(field.typeRef, allTypes))
+    (event) => event.placeholders.some(
+      (placeholder) => typeUsesTime(placeholder.field.typeRef, allTypes)
+    )
   );
   if (needsFmt) {
     imports.push('"fmt"');
@@ -415,23 +339,6 @@ function renderCatalog(events) {
   return lines;
 }
 __name(renderCatalog, "renderCatalog");
-function renderEventStruct(event, allTypes) {
-  const lines = [
-    ...renderEventComment(
-      `${event.name} is the payload generated for this event.`,
-      event
-    ),
-    `type ${event.name} struct {`
-  ];
-  for (const field of event.fields) {
-    lines.push(
-      `	${pascalCase(field.name)} ${renderGoType(field.typeRef, field.optional, allTypes)} \`json:"${field.name}"\``
-    );
-  }
-  lines.push("}");
-  return lines;
-}
-__name(renderEventStruct, "renderEventStruct");
 function renderSubjectBuilder(event, allTypes) {
   const params = uniquePlaceholders(event.placeholders).map((placeholder) => {
     return `${placeholder.name} ${renderGoType(placeholder.field.typeRef, placeholder.field.optional, allTypes)}`;
