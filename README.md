@@ -52,7 +52,7 @@ const config = {
       }
     }
     {
-      src "varavelio/vdl-plugin-events-go@v0.1.1"
+      src "varavelio/vdl-plugin-events-go@v0.1.2"
       schema "./schema.vdl"
       outDir "./events"
       options {
@@ -87,7 +87,7 @@ const config = {
   version 1
   plugins [
     {
-      src "varavelio/vdl-plugin-events-go@v0.1.1"
+      src "varavelio/vdl-plugin-events-go@v0.1.2"
       schema "./schema.vdl"
       outDir "./gen"
       options {
@@ -127,14 +127,13 @@ type UserCreatedEvent {
 
 For each annotated event, the plugin generates:
 
-- a `Build<TypeName>Subject(...)` helper
-- event documentation comments in idiomatic Go style
+- an unexported `build<TypeName>Subject(...)` subject builder
+- idiomatic Go doc comments on each catalog field for hover-friendly metadata
 
 It also generates shared runtime metadata:
 
-- `VDLEventMetadataItem`
-- `VDLEventMetadata`
-- `VDLEventCatalog`
+- `VDLEventCatalogMeta` — top-level struct grouping per-event anonymous structs
+- `VDLEventCatalog` — variable holding the fully typed event catalog with `BuildSubject` function references
 
 All generated events are consolidated into a single Go file.
 
@@ -151,14 +150,47 @@ type UserCreatedEvent {
 }
 ```
 
-The generated Go output is conceptually similar to:
+The generated Go output is similar to:
 
 ```go
-// BuildUserCreatedEventSubject builds the routing subject for UserCreatedEvent.
-func BuildUserCreatedEventSubject(userId string) string {
-    return "auth.user_created." + userId
+type VDLEventCatalogMeta struct {
+	UserCreatedEvent struct {
+		Name            string
+		SubjectTemplate string
+		BuildSubject    func(userId string) string
+	}
+}
+
+var VDLEventCatalog = VDLEventCatalogMeta{
+	UserCreatedEvent: struct {
+		// Name is the name of this event.
+		//
+		//	// Name:    UserCreatedEvent
+		//	// Subject: auth.user_created.{userId}
+		Name string
+		// SubjectTemplate is the subject template for this event.
+		//
+		//	// Name:    UserCreatedEvent
+		//	// Subject: auth.user_created.{userId}
+		SubjectTemplate string
+		// BuildSubject builds the routing subject for this event.
+		//
+		//	// Name:    UserCreatedEvent
+		//	// Subject: auth.user_created.{userId}
+		BuildSubject func(userId string) string
+	}{
+		Name:            "UserCreatedEvent",
+		SubjectTemplate: "auth.user_created.{userId}",
+		BuildSubject:    buildUserCreatedEventSubject,
+	},
+}
+
+func buildUserCreatedEventSubject(userId string) string {
+	return "auth.user_created." + userId
 }
 ```
+
+Each catalog field has hover-friendly doc comments showing the event name and subject template. The builder functions are unexported, external access goes through the catalog's typed `BuildSubject` fields.
 
 ## Type Mapping
 
