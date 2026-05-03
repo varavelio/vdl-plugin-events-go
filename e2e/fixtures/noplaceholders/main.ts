@@ -4,7 +4,11 @@ import { readFileSync } from "node:fs";
 const generated = readFileSync("gen/events.go", "utf-8");
 
 ok(
-  generated.includes("func BuildSystemReadyEventSubject() string {"),
+  generated.includes("BuildSubject: buildSystemReadyEventSubject,"),
+  "missing catalog build subject reference",
+);
+ok(
+  generated.includes("func buildSystemReadyEventSubject() string {"),
   "expected zero-argument builder for static subjects",
 );
 ok(

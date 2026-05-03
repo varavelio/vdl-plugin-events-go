@@ -7,8 +7,12 @@ ok(!existsSync("gen/events.go"), "default output should not be emitted");
 const generated = readFileSync("gen/billing-events.go", "utf-8");
 
 ok(
+  generated.includes("BuildSubject: buildInvoicePaidEventSubject,"),
+  "missing catalog build subject reference",
+);
+ok(
   generated.includes(
-    "func BuildInvoicePaidEventSubject(invoiceId int64) string {",
+    "func buildInvoicePaidEventSubject(invoiceId int64) string {",
   ),
   "missing invoice subject builder",
 );

@@ -4,8 +4,12 @@ import { readFileSync } from "node:fs";
 const generated = readFileSync("gen/events.go", "utf-8");
 
 ok(
+  generated.includes("BuildSubject: buildComplexPayloadEventSubject,"),
+  "missing catalog build subject reference",
+);
+ok(
   generated.includes(
-    "func BuildComplexPayloadEventSubject(tenantId string) string {",
+    "func buildComplexPayloadEventSubject(tenantId string) string {",
   ),
   "missing subject builder",
 );

@@ -170,23 +170,32 @@ describe("generate", () => {
     expect(file.path).toBe("events.go");
     expect(file.content).toContain("package audit");
     expect(file.content).toContain(
-      "// VDLEventMetadataItem describes one generated event contract.",
+      "// VDLEventCatalogMeta groups generated event metadata by payload type name.",
     );
     expect(file.content).toContain(
-      "// VDLEventMetadata groups generated event metadata by payload type name.",
+      "// VDLEventCatalog indexes generated events by payload type name.",
     );
-    expect(file.content).toContain("type VDLEventMetadataItem struct {");
-    expect(file.content).toContain("type VDLEventMetadata struct {");
-    expect(file.content).toContain("var VDLEventCatalog = VDLEventMetadata{");
-    expect(file.content).toContain("UserCreatedEvent VDLEventMetadataItem");
-    expect(file.content).toContain("UserCreatedEvent: VDLEventMetadataItem{");
-    expect(file.content).toContain("// Name:");
-    expect(file.content).toContain("// Subject:");
-    expect(file.content).toContain("//\tUserCreatedEvent");
-    expect(file.content).toContain("//\tauth.user_created.{userId}");
+    expect(file.content).toContain("type VDLEventCatalogMeta struct {");
     expect(file.content).toContain(
-      "// BuildUserCreatedEventSubject builds the routing subject for this event.",
+      "var VDLEventCatalog = VDLEventCatalogMeta{",
     );
+    expect(file.content).toContain("UserCreatedEvent struct {");
+    expect(file.content).toContain("BuildSubject func(userId string) string");
+    expect(file.content).toContain(
+      "BuildSubject: buildUserCreatedEventSubject,",
+    );
+    expect(file.content).toContain("// Name is the name of this event.");
+    expect(file.content).toContain(
+      "// SubjectTemplate is the subject template for this event.",
+    );
+    expect(file.content).toContain(
+      "// BuildSubject builds the subject for this event.",
+    );
+    expect(file.content).toContain("//\t// Name:    UserCreatedEvent");
+    expect(file.content).toContain(
+      "//\t// Subject: auth.user_created.{userId}",
+    );
+    expect(file.content).not.toContain("type VDLEventMetadataItem struct");
     expect(file.content).not.toContain("type UserCreatedEvent struct {");
     expect(file.content).not.toContain("type IgnoredType struct {");
   });
@@ -207,9 +216,12 @@ describe("generate", () => {
 
     const file = getOnlyGeneratedFile(output);
     expect(file.content).toContain(
-      "func BuildSystemReadyEventSubject() string {",
+      "BuildSubject: buildSystemReadyEventSubject,",
     );
-    expect(file.content).toContain("//\tsystem.ready");
+    expect(file.content).toContain(
+      "func buildSystemReadyEventSubject() string {",
+    );
+    expect(file.content).toContain("//\t// Subject: system.ready");
     expect(file.content).toContain('return "system.ready"');
     expect(file.content).not.toContain('"fmt"');
     expect(file.content).not.toContain('"time"');
@@ -237,10 +249,10 @@ describe("generate", () => {
 
     const file = getOnlyGeneratedFile(output);
     expect(file.content).toContain(
-      "func BuildTenantAuditEventSubject(tenantId string) string {",
+      "func buildTenantAuditEventSubject(tenantId string) string {",
     );
     expect(file.content).toContain(
-      "//\taudit.{tenantId}.users.{tenantId}.created",
+      "//\t// Subject: audit.{tenantId}.users.{tenantId}.created",
     );
     expect(file.content).toContain(
       'return "audit." + tenantId + ".users." + tenantId + ".created"',
@@ -279,7 +291,7 @@ describe("generate", () => {
 	"time"
 )`);
     expect(file.content).toContain(
-      "func BuildPrimitiveSubjectEventSubject(name string, count int64, amount float64, active bool, occurredAt time.Time) string {",
+      "func buildPrimitiveSubjectEventSubject(name string, count int64, amount float64, active bool, occurredAt time.Time) string {",
     );
     expect(file.content).toContain(
       'return "metrics." + name + "." + fmt.Sprint(count) + "." + fmt.Sprint(amount) + "." + fmt.Sprint(active) + "." + occurredAt.Format(time.RFC3339Nano)',
@@ -310,7 +322,7 @@ describe("generate", () => {
 
     const file = getOnlyGeneratedFile(output);
     expect(file.content).toContain(
-      "func BuildTenantCreatedEventSubject(tenantId string) string {",
+      "func buildTenantCreatedEventSubject(tenantId string) string {",
     );
     expect(file.content).toContain('return "tenants." + tenantId + ".created"');
   });
@@ -344,7 +356,7 @@ describe("generate", () => {
 
     const file = getOnlyGeneratedFile(output);
     expect(file.content).toContain(
-      "func BuildComplexPayloadEventSubject(tenantId string) string {",
+      "func buildComplexPayloadEventSubject(tenantId string) string {",
     );
     expect(file.content).not.toContain("type ComplexPayloadEvent struct {");
     expect(file.content).not.toContain("ActorId int64");

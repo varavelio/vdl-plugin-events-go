@@ -11,26 +11,32 @@ ok(
   "event payload structs must not be generated",
 );
 ok(
+  generated.includes("BuildSubject: buildUserCreatedEventSubject,"),
+  "missing catalog build subject reference",
+);
+ok(
   generated.includes(
-    "func BuildUserCreatedEventSubject(userId string) string {",
+    "func buildUserCreatedEventSubject(userId string) string {",
   ),
   "missing subject builder",
 );
 ok(
+  generated.includes("// Name is the name of this event."),
+  "missing name field comment",
+);
+ok(
   generated.includes(
-    "// BuildUserCreatedEventSubject builds the routing subject for this event.",
+    "// SubjectTemplate is the subject template for this event.",
   ),
-  "missing builder comment",
-);
-ok(generated.includes("// Name:"), "missing event name label");
-ok(generated.includes("// Subject:"), "missing event subject label");
-ok(
-  generated.includes("//\tauth.user_created.{userId}"),
-  "missing event subject block",
+  "missing subject template field comment",
 );
 ok(
-  generated.includes('Subject: "auth.user_created.{userId}",'),
-  "missing event catalog subject",
+  generated.includes("// BuildSubject builds the subject for this event."),
+  "missing builder field comment",
+);
+ok(
+  generated.includes('SubjectTemplate: "auth.user_created.{userId}",'),
+  "missing event catalog subject template",
 );
 ok(
   !generated.includes("type IgnoredType struct {"),
