@@ -277,7 +277,7 @@ function renderGoFile(packageName, events, allTypes) {
     }
     lines.push(")", "");
   }
-  lines.push(...renderCatalog(events), "");
+  lines.push(...renderCatalog(events, allTypes), "");
   for (const [index, event] of events.entries()) {
     lines.push(...renderSubjectBuilder(event, allTypes));
     if (index < events.length - 1) {
@@ -309,30 +309,49 @@ function collectImports(events, allTypes) {
   return imports;
 }
 __name(collectImports, "collectImports");
-function renderCatalog(events) {
+function renderCatalog(events, allTypes) {
   const lines = [
-    "// VDLEventMetadataItem describes one generated event contract.",
-    "type VDLEventMetadataItem struct {",
-    "	Name string",
-    "	Subject string",
-    "}",
-    "",
-    "// VDLEventMetadata groups generated event metadata by payload type name.",
-    "type VDLEventMetadata struct {"
+    "// VDLEventCatalogMeta groups generated event metadata by payload type name.",
+    "type VDLEventCatalogMeta struct {"
   ];
   for (const event of events) {
-    lines.push(`	${event.name} VDLEventMetadataItem`);
+    const params = renderSubjectParams(event, allTypes);
+    lines.push(`	${event.name} struct {`);
+    lines.push("		Name string");
+    lines.push("		SubjectTemplate string");
+    lines.push(`		BuildSubject func(${params}) string`);
+    lines.push("	}");
   }
   lines.push(
     "}",
     "",
     "// VDLEventCatalog indexes generated events by payload type name.",
-    "var VDLEventCatalog = VDLEventMetadata{"
+    "var VDLEventCatalog = VDLEventCatalogMeta{"
   );
   for (const event of events) {
-    lines.push(`	${event.name}: VDLEventMetadataItem{`);
+    const params = renderSubjectParams(event, allTypes);
+    lines.push(`	${event.name}: struct {`);
+    lines.push("		// Name is the name of this event.");
+    lines.push("		//");
+    lines.push(`		//	// Name:    ${event.name}`);
+    lines.push(`		//	// Subject: ${event.subject}`);
+    lines.push("		Name string");
+    lines.push(
+      "		// SubjectTemplate is the subject template for this event."
+    );
+    lines.push("		//");
+    lines.push(`		//	// Name:    ${event.name}`);
+    lines.push(`		//	// Subject: ${event.subject}`);
+    lines.push("		SubjectTemplate string");
+    lines.push("		// BuildSubject builds the subject for this event.");
+    lines.push("		//");
+    lines.push(`		//	// Name:    ${event.name}`);
+    lines.push(`		//	// Subject: ${event.subject}`);
+    lines.push(`		BuildSubject func(${params}) string`);
+    lines.push("	}{");
     lines.push(`		Name: "${event.name}",`);
-    lines.push(`		Subject: "${event.subject}",`);
+    lines.push(`		SubjectTemplate: "${event.subject}",`);
+    lines.push(`		BuildSubject: build${event.name}Subject,`);
     lines.push("	},");
   }
   lines.push("}");
@@ -340,34 +359,20 @@ function renderCatalog(events) {
 }
 __name(renderCatalog, "renderCatalog");
 function renderSubjectBuilder(event, allTypes) {
-  const params = uniquePlaceholders(event.placeholders).map((placeholder) => {
-    return `${placeholder.name} ${renderGoType(placeholder.field.typeRef, placeholder.field.optional, allTypes)}`;
-  });
+  const params = renderSubjectParams(event, allTypes);
   return [
-    ...renderEventComment(
-      `Build${event.name}Subject builds the routing subject for this event.`,
-      event
-    ),
-    `func Build${event.name}Subject(${params.join(", ")}) string {`,
+    `func build${event.name}Subject(${params}) string {`,
     `	return ${renderSubjectParts(event, allTypes).join(" + ")}`,
     "}"
   ];
 }
 __name(renderSubjectBuilder, "renderSubjectBuilder");
-function renderEventComment(summary, event) {
-  return [
-    `// ${summary}`,
-    "//",
-    "// Name:",
-    "//",
-    `//	${event.name}`,
-    "//",
-    "// Subject:",
-    "//",
-    `//	${event.subject}`
-  ];
+function renderSubjectParams(event, allTypes) {
+  return uniquePlaceholders(event.placeholders).map((placeholder) => {
+    return `${placeholder.name} ${renderGoType(placeholder.field.typeRef, placeholder.field.optional, allTypes)}`;
+  }).join(", ");
 }
-__name(renderEventComment, "renderEventComment");
+__name(renderSubjectParams, "renderSubjectParams");
 function renderSubjectParts(event, allTypes) {
   var _a2, _b, _c;
   const parts = [];
