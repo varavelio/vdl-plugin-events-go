@@ -27,7 +27,7 @@ export function renderGoFile(
     lines.push(")", "");
   }
 
-  lines.push(...renderCatalog(events), "");
+  lines.push(...renderCatalog(events, allTypes), "");
 
   for (const [index, event] of events.entries()) {
     lines.push(...renderSubjectBuilder(event, allTypes));
@@ -69,35 +69,54 @@ function collectImports(events: EventModel[], allTypes: TypeDef[]): string[] {
 }
 
 /**
- * Renders the generated event catalog definitions.
+ * Renders the generated event catalog definitions with typed BuildSubject fields.
  */
-function renderCatalog(events: EventModel[]): string[] {
+function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
   const lines = [
-    "// VDLEventMetadataItem describes one generated event contract.",
-    "type VDLEventMetadataItem struct {",
-    "\tName string",
-    "\tSubject string",
-    "}",
-    "",
-    "// VDLEventMetadata groups generated event metadata by payload type name.",
-    "type VDLEventMetadata struct {",
+    "// VDLEventCatalogMeta groups generated event metadata by payload type name.",
+    "type VDLEventCatalogMeta struct {",
   ];
 
   for (const event of events) {
-    lines.push(`\t${event.name} VDLEventMetadataItem`);
+    const params = renderSubjectParams(event, allTypes);
+    lines.push(`\t${event.name} struct {`);
+    lines.push("\t\tName string");
+    lines.push("\t\tSubjectTemplate string");
+    lines.push(`\t\tBuildSubject func(${params}) string`);
+    lines.push("\t}");
   }
 
   lines.push(
     "}",
     "",
     "// VDLEventCatalog indexes generated events by payload type name.",
-    "var VDLEventCatalog = VDLEventMetadata{",
+    "var VDLEventCatalog = VDLEventCatalogMeta{",
   );
 
   for (const event of events) {
-    lines.push(`\t${event.name}: VDLEventMetadataItem{`);
+    const params = renderSubjectParams(event, allTypes);
+    lines.push(`\t${event.name}: struct {`);
+    lines.push("\t\t// Name is the name of this event.");
+    lines.push("\t\t//");
+    lines.push(`\t\t//\t// Name:    ${event.name}`);
+    lines.push(`\t\t//\t// Subject: ${event.subject}`);
+    lines.push("\t\tName string");
+    lines.push(
+      "\t\t// SubjectTemplate is the subject template for this event.",
+    );
+    lines.push("\t\t//");
+    lines.push(`\t\t//\t// Name:    ${event.name}`);
+    lines.push(`\t\t//\t// Subject: ${event.subject}`);
+    lines.push("\t\tSubjectTemplate string");
+    lines.push("\t\t// BuildSubject builds the subject for this event.");
+    lines.push("\t\t//");
+    lines.push(`\t\t//\t// Name:    ${event.name}`);
+    lines.push(`\t\t//\t// Subject: ${event.subject}`);
+    lines.push(`\t\tBuildSubject func(${params}) string`);
+    lines.push("\t}{");
     lines.push(`\t\tName: "${event.name}",`);
-    lines.push(`\t\tSubject: "${event.subject}",`);
+    lines.push(`\t\tSubjectTemplate: "${event.subject}",`);
+    lines.push(`\t\tBuildSubject: build${event.name}Subject,`);
     lines.push("\t},");
   }
 
@@ -106,42 +125,29 @@ function renderCatalog(events: EventModel[]): string[] {
 }
 
 /**
- * Renders one generated Go subject builder for an event.
+ * Renders one generated (unexported) Go subject builder for an event.
  */
 function renderSubjectBuilder(
   event: EventModel,
   allTypes: TypeDef[],
 ): string[] {
-  const params = uniquePlaceholders(event.placeholders).map((placeholder) => {
-    return `${placeholder.name} ${renderGoType(placeholder.field.typeRef, placeholder.field.optional, allTypes)}`;
-  });
-
+  const params = renderSubjectParams(event, allTypes);
   return [
-    ...renderEventComment(
-      `Build${event.name}Subject builds the routing subject for this event.`,
-      event,
-    ),
-    `func Build${event.name}Subject(${params.join(", ")}) string {`,
+    `func build${event.name}Subject(${params}) string {`,
     `\treturn ${renderSubjectParts(event, allTypes).join(" + ")}`,
     "}",
   ];
 }
 
 /**
- * Renders a Go doc comment block for one generated event artifact.
+ * Renders the parameter list string for a subject builder function.
  */
-function renderEventComment(summary: string, event: EventModel): string[] {
-  return [
-    `// ${summary}`,
-    "//",
-    "// Name:",
-    "//",
-    `//\t${event.name}`,
-    "//",
-    "// Subject:",
-    "//",
-    `//\t${event.subject}`,
-  ];
+function renderSubjectParams(event: EventModel, allTypes: TypeDef[]): string {
+  return uniquePlaceholders(event.placeholders)
+    .map((placeholder) => {
+      return `${placeholder.name} ${renderGoType(placeholder.field.typeRef, placeholder.field.optional, allTypes)}`;
+    })
+    .join(", ");
 }
 
 /**
