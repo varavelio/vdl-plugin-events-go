@@ -132,7 +132,7 @@ For each annotated event, the plugin generates:
 
 It also generates shared runtime metadata:
 
-- `VDLEventCatalogMeta` — top-level struct grouping per-event anonymous structs
+- `VDLEventCatalogRegistry` — top-level struct grouping per-event anonymous structs
 - `VDLEventCatalog` — variable holding the fully typed event catalog with `BuildSubject` function references
 
 All generated events are consolidated into a single Go file.
@@ -153,7 +153,7 @@ type UserCreatedEvent {
 The generated Go output is similar to:
 
 ```go
-type VDLEventCatalogMeta struct {
+type VDLEventCatalogRegistry struct {
 	UserCreatedEvent struct {
 		Name            string
 		SubjectTemplate string
@@ -161,7 +161,7 @@ type VDLEventCatalogMeta struct {
 	}
 }
 
-var VDLEventCatalog = VDLEventCatalogMeta{
+var VDLEventCatalog = VDLEventCatalogRegistry{
 	UserCreatedEvent: struct {
 		// Name is the name of this event.
 		//

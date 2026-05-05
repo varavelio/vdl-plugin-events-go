@@ -90,8 +90,8 @@ function renderFieldDocLines(event: EventModel, indent: string): string[] {
 
 function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
   const lines = [
-    "// VDLEventCatalogMeta groups generated event metadata by payload type name.",
-    "type VDLEventCatalogMeta struct {",
+    "// VDLEventCatalogRegistry catalogs all @event-annotated types with their subject metadata and builders.",
+    "type VDLEventCatalogRegistry struct {",
   ];
 
   for (const event of events) {
@@ -116,7 +116,7 @@ function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
     "}",
     "",
     "// VDLEventCatalog indexes generated events by payload type name.",
-    "var VDLEventCatalog = VDLEventCatalogMeta{",
+    "var VDLEventCatalog = VDLEventCatalogRegistry{",
   );
 
   for (const event of events) {
