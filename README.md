@@ -52,7 +52,7 @@ const config = {
       }
     }
     {
-      src "varavelio/vdl-plugin-events-go@v0.1.2"
+      src "varavelio/vdl-plugin-events-go@v0.1.3"
       schema "./schema.vdl"
       outDir "./events"
       options {
@@ -87,7 +87,7 @@ const config = {
   version 1
   plugins [
     {
-      src "varavelio/vdl-plugin-events-go@v0.1.2"
+      src "varavelio/vdl-plugin-events-go@v0.1.3"
       schema "./schema.vdl"
       outDir "./gen"
       options {
