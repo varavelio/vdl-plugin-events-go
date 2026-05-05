@@ -309,16 +309,42 @@ function collectImports(events, allTypes) {
   return imports;
 }
 __name(collectImports, "collectImports");
+function renderEventDocLines(event, indent) {
+  return [
+    `${indent}// ${event.name} is the metadata for the ${event.name} event.`,
+    `${indent}//`,
+    `${indent}//	// Name:    ${event.name}`,
+    `${indent}//	// Subject: ${event.subject}`
+  ];
+}
+__name(renderEventDocLines, "renderEventDocLines");
+function renderFieldDocLines(event, indent) {
+  return [
+    `${indent}//`,
+    `${indent}//	// Name:    ${event.name}`,
+    `${indent}//	// Subject: ${event.subject}`
+  ];
+}
+__name(renderFieldDocLines, "renderFieldDocLines");
 function renderCatalog(events, allTypes) {
   const lines = [
-    "// VDLEventCatalogMeta groups generated event metadata by payload type name.",
-    "type VDLEventCatalogMeta struct {"
+    "// VDLEventCatalogRegistry catalogs all @event-annotated types with their subject metadata and builders.",
+    "type VDLEventCatalogRegistry struct {"
   ];
   for (const event of events) {
     const params = renderSubjectParams(event, allTypes);
+    lines.push(...renderEventDocLines(event, "	"));
     lines.push(`	${event.name} struct {`);
+    lines.push("		// Name is the name of this event.");
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push("		Name string");
+    lines.push(
+      "		// SubjectTemplate is the subject template for this event."
+    );
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push("		SubjectTemplate string");
+    lines.push("		// BuildSubject builds the subject for this event.");
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push(`		BuildSubject func(${params}) string`);
     lines.push("	}");
   }
@@ -326,31 +352,34 @@ function renderCatalog(events, allTypes) {
     "}",
     "",
     "// VDLEventCatalog indexes generated events by payload type name.",
-    "var VDLEventCatalog = VDLEventCatalogMeta{"
+    "var VDLEventCatalog = VDLEventCatalogRegistry{"
   );
   for (const event of events) {
     const params = renderSubjectParams(event, allTypes);
+    lines.push(...renderEventDocLines(event, "	"));
     lines.push(`	${event.name}: struct {`);
     lines.push("		// Name is the name of this event.");
-    lines.push("		//");
-    lines.push(`		//	// Name:    ${event.name}`);
-    lines.push(`		//	// Subject: ${event.subject}`);
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push("		Name string");
     lines.push(
       "		// SubjectTemplate is the subject template for this event."
     );
-    lines.push("		//");
-    lines.push(`		//	// Name:    ${event.name}`);
-    lines.push(`		//	// Subject: ${event.subject}`);
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push("		SubjectTemplate string");
     lines.push("		// BuildSubject builds the subject for this event.");
-    lines.push("		//");
-    lines.push(`		//	// Name:    ${event.name}`);
-    lines.push(`		//	// Subject: ${event.subject}`);
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push(`		BuildSubject func(${params}) string`);
     lines.push("	}{");
+    lines.push("		// Name is the name of this event.");
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push(`		Name: "${event.name}",`);
+    lines.push(
+      "		// SubjectTemplate is the subject template for this event."
+    );
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push(`		SubjectTemplate: "${event.subject}",`);
+    lines.push("		// BuildSubject builds the subject for this event.");
+    lines.push(...renderFieldDocLines(event, "		"));
     lines.push(`		BuildSubject: build${event.name}Subject,`);
     lines.push("	},");
   }
