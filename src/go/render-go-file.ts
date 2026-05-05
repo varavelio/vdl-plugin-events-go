@@ -71,6 +71,23 @@ function collectImports(events: EventModel[], allTypes: TypeDef[]): string[] {
 /**
  * Renders the generated event catalog definitions with typed BuildSubject fields.
  */
+function renderEventDocLines(event: EventModel, indent: string): string[] {
+  return [
+    `${indent}// ${event.name} is the metadata for the ${event.name} event.`,
+    `${indent}//`,
+    `${indent}//\t// Name:    ${event.name}`,
+    `${indent}//\t// Subject: ${event.subject}`,
+  ];
+}
+
+function renderFieldDocLines(event: EventModel, indent: string): string[] {
+  return [
+    `${indent}//`,
+    `${indent}//\t// Name:    ${event.name}`,
+    `${indent}//\t// Subject: ${event.subject}`,
+  ];
+}
+
 function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
   const lines = [
     "// VDLEventCatalogMeta groups generated event metadata by payload type name.",
@@ -79,9 +96,18 @@ function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
 
   for (const event of events) {
     const params = renderSubjectParams(event, allTypes);
+    lines.push(...renderEventDocLines(event, "\t"));
     lines.push(`\t${event.name} struct {`);
+    lines.push("\t\t// Name is the name of this event.");
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push("\t\tName string");
+    lines.push(
+      "\t\t// SubjectTemplate is the subject template for this event.",
+    );
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push("\t\tSubjectTemplate string");
+    lines.push("\t\t// BuildSubject builds the subject for this event.");
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push(`\t\tBuildSubject func(${params}) string`);
     lines.push("\t}");
   }
@@ -95,27 +121,30 @@ function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
 
   for (const event of events) {
     const params = renderSubjectParams(event, allTypes);
+    lines.push(...renderEventDocLines(event, "\t"));
     lines.push(`\t${event.name}: struct {`);
     lines.push("\t\t// Name is the name of this event.");
-    lines.push("\t\t//");
-    lines.push(`\t\t//\t// Name:    ${event.name}`);
-    lines.push(`\t\t//\t// Subject: ${event.subject}`);
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push("\t\tName string");
     lines.push(
       "\t\t// SubjectTemplate is the subject template for this event.",
     );
-    lines.push("\t\t//");
-    lines.push(`\t\t//\t// Name:    ${event.name}`);
-    lines.push(`\t\t//\t// Subject: ${event.subject}`);
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push("\t\tSubjectTemplate string");
     lines.push("\t\t// BuildSubject builds the subject for this event.");
-    lines.push("\t\t//");
-    lines.push(`\t\t//\t// Name:    ${event.name}`);
-    lines.push(`\t\t//\t// Subject: ${event.subject}`);
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push(`\t\tBuildSubject func(${params}) string`);
     lines.push("\t}{");
+    lines.push("\t\t// Name is the name of this event.");
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push(`\t\tName: "${event.name}",`);
+    lines.push(
+      "\t\t// SubjectTemplate is the subject template for this event.",
+    );
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push(`\t\tSubjectTemplate: "${event.subject}",`);
+    lines.push("\t\t// BuildSubject builds the subject for this event.");
+    lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push(`\t\tBuildSubject: build${event.name}Subject,`);
     lines.push("\t},");
   }

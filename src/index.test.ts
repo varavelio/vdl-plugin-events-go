@@ -184,6 +184,9 @@ describe("generate", () => {
     expect(file.content).toContain(
       "BuildSubject: buildUserCreatedEventSubject,",
     );
+    expect(file.content).toContain(
+      "// UserCreatedEvent is the metadata for the UserCreatedEvent event.",
+    );
     expect(file.content).toContain("// Name is the name of this event.");
     expect(file.content).toContain(
       "// SubjectTemplate is the subject template for this event.",
