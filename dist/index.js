@@ -397,8 +397,8 @@ function renderFieldDocLines(event, indent) {
 __name(renderFieldDocLines, "renderFieldDocLines");
 function renderCatalog(events) {
   const lines = [
-    "// VDLEventCatalogRegistry catalogs all @event-annotated types with their subject metadata and builders.",
-    "type VDLEventCatalogRegistry struct {"
+    "// VDLEventCatalog catalogs all @event-annotated types with their subject metadata and builders.",
+    "type VDLEventCatalog struct {"
   ];
   for (const event of events) {
     const params = renderSubjectParams(event);
@@ -420,8 +420,8 @@ function renderCatalog(events) {
   lines.push(
     "}",
     "",
-    "// VDLEventCatalog indexes generated events by payload type name.",
-    "var VDLEventCatalog = VDLEventCatalogRegistry{"
+    "// VDLEvents indexes generated events by payload type name.",
+    "var VDLEvents = VDLEventCatalog{"
   );
   for (const event of events) {
     const params = renderSubjectParams(event);

@@ -24,7 +24,7 @@ When updating this document, do so with the context of the entire document in mi
 - `e2e/` this directory contains end to end tests. Recommended structure: one fixture folder per test.
 - Prefer explicit e2e assertions over full-file snapshots because VDL prepends generated headers that change when the bundled plugin hash changes.
 - This plugin only emits Go event artifacts for types annotated with `@event`; unannotated types are ignored.
-- Generated artifacts are limited to unexported subject builder functions and a `VDLEventCatalog` variable of type `VDLEventCatalogRegistry`. The catalog uses per-event anonymous structs with a fully typed `BuildSubject` field referencing each builder. Payload structs/types are intentionally out of scope for this plugin.
+- Generated artifacts are limited to unexported subject builder functions and a `VDLEvents` variable of type `VDLEventCatalog`. The catalog uses per-event anonymous structs with a fully typed `BuildSubject` field referencing each builder. Payload structs/types are intentionally out of scope for this plugin.
 - Generated output is consolidated into a single Go file, defaults to `events.go`, and can be renamed through the `outFile` option when it still ends in `.go`.
 - Validate `@event` schemas with `assertValidIrForEvents` from SDK `utils/events`; enrich results with VPP-1 deprecation metadata via SDK `utils/deprecations` instead of custom IR parsing.
 - Surface `@deprecated` as Go `// Deprecated:` godoc on catalog entries and subject builders, preserving the optional message with a default fallback.
