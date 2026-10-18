@@ -1,3 +1,3 @@
 module example.com/simpletest
 
-go 1.26
+go 1.27.2

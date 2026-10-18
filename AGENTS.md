@@ -29,3 +29,4 @@ When updating this document, do so with the context of the entire document in mi
 - Validate `@event` schemas with `assertValidIrForEvents` from SDK `utils/events`; enrich results with VPP-1 deprecation metadata via SDK `utils/deprecations` instead of custom IR parsing.
 - Surface `@deprecated` as Go `// Deprecated:` godoc on catalog entries and subject builders, preserving the optional message with a default fallback.
 - E2E fixtures should run `go build ./gen` after generation so the generated Go output is compile-checked, not just string-checked.
+- Keep `e2e/fixtures/*/go.mod` aligned with the Dockerfile Go version.
