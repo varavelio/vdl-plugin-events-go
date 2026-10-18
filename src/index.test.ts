@@ -508,37 +508,40 @@ describe("generate", () => {
     ["inline object", objectType([field("id", primitiveType("string"))])],
     ["named object", namedType("User")],
     ["enum", enumType("Status", "string")],
-  ])("returns a diagnostic when a placeholder references a non-primitive %s field", (_label, typeRef) => {
-    const output = generateFromSchema(
-      { package: "events" },
-      schema({
-        enums: [
-          enumDef("Status", "string", [
-            enumMember("Pending", stringLiteral("pending")),
-          ]),
-        ],
-        types: [
-          typeDef("User", objectType([field("id", primitiveType("string"))])),
-          typeDef(
-            "InvalidEvent",
-            objectType([
-              field("subjectPart", typeRef),
-              field("ok", primitiveType("string")),
+  ])(
+    "returns a diagnostic when a placeholder references a non-primitive %s field",
+    (_label, typeRef) => {
+      const output = generateFromSchema(
+        { package: "events" },
+        schema({
+          enums: [
+            enumDef("Status", "string", [
+              enumMember("Pending", stringLiteral("pending")),
             ]),
-            {
-              annotations: [
-                createEventAnnotation("invalid.{subjectPart}.created"),
-              ],
-            },
-          ),
-        ],
-      }),
-    );
+          ],
+          types: [
+            typeDef("User", objectType([field("id", primitiveType("string"))])),
+            typeDef(
+              "InvalidEvent",
+              objectType([
+                field("subjectPart", typeRef),
+                field("ok", primitiveType("string")),
+              ]),
+              {
+                annotations: [
+                  createEventAnnotation("invalid.{subjectPart}.created"),
+                ],
+              },
+            ),
+          ],
+        }),
+      );
 
-    expect(output.files).toEqual([]);
-    expect(output.errors).toHaveLength(1);
-    expect(output.errors?.[0]?.message).toContain(
-      'Placeholder "subjectPart" must reference a top-level primitive field',
-    );
-  });
+      expect(output.files).toEqual([]);
+      expect(output.errors).toHaveLength(1);
+      expect(output.errors?.[0]?.message).toContain(
+        'Placeholder "subjectPart" must reference a top-level primitive field',
+      );
+    },
+  );
 });

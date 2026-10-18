@@ -14,10 +14,16 @@
 
 <p align="center">
   <a href="https://varavel.com">
-    <img src="https://cdn.jsdelivr.net/gh/varavelio/brand@1.0.0/dist/badges/project.svg" alt="A Varavel project"/>
+    <img
+      src="https://cdn.jsdelivr.net/gh/varavelio/brand@1.0.0/dist/badges/project.svg"
+      alt="A Varavel project"
+    />
   </a>
   <a href="https://varavel.com/vdl">
-    <img src="https://cdn.jsdelivr.net/gh/varavelio/brand@1.0.0/dist/badges/vdl-plugin.svg" alt="VDL Plugin"/>
+    <img
+      src="https://cdn.jsdelivr.net/gh/varavelio/brand@1.0.0/dist/badges/vdl-plugin.svg"
+      alt="VDL Plugin"
+    />
   </a>
 </p>
 
