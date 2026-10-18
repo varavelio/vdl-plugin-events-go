@@ -111,9 +111,9 @@ const config = {
 
 ## Event Annotation Model
 
-This plugin follows the VDL `@event` specification:
+This plugin follows the VDL `@event` specification (VPP-4):
 
-- Spec: https://github.com/varavelio/vdl/blob/c1b8080201d87a329c0d307ead963d6e2659e5b7/docs/reference/events.md
+- Spec: https://vdl.varavel.com/docs/protocols/events/
 
 Core rules enforced by this plugin:
 
@@ -135,15 +135,8 @@ type UserCreatedEvent {
 
 ## What You Get
 
-For each annotated event, the plugin generates:
-
-- an unexported `build<TypeName>Subject(...)` subject builder
-- idiomatic Go doc comments on each catalog field for hover-friendly metadata
-
-It also generates shared runtime metadata:
-
-- `VDLEventCatalog` — top-level struct grouping per-event anonymous structs
-- `VDLEvents` — variable holding the fully typed event catalog with `BuildSubject` function references
+- `VDLEventCatalog`: top-level struct grouping per-event anonymous structs
+- `VDLEvents`: variable holding the fully typed event catalog with `BuildSubject` function references
 
 All generated events are consolidated into a single Go file.
 
@@ -160,7 +153,7 @@ type UserCreatedEvent {
 }
 ```
 
-The generated Go output is similar to:
+The generated Go output is similar to (comments and generated documentation were removed for brevity):
 
 ```go
 type VDLEventCatalog struct {
@@ -173,20 +166,8 @@ type VDLEventCatalog struct {
 
 var VDLEvents = VDLEventCatalog{
 	UserCreatedEvent: struct {
-		// Name is the name of this event.
-		//
-		//	// Name:    UserCreatedEvent
-		//	// Subject: auth.user_created.{userId}
 		Name string
-		// SubjectTemplate is the subject template for this event.
-		//
-		//	// Name:    UserCreatedEvent
-		//	// Subject: auth.user_created.{userId}
 		SubjectTemplate string
-		// BuildSubject builds the routing subject for this event.
-		//
-		//	// Name:    UserCreatedEvent
-		//	// Subject: auth.user_created.{userId}
 		BuildSubject func(userId string) string
 	}{
 		Name:            "UserCreatedEvent",
