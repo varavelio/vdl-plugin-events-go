@@ -1,6 +1,6 @@
 <p align="center">
   <img
-    src="https://raw.githubusercontent.com/varavelio/vdl/9cb8432f972f986ba91ffa1e4fe82220a8aa373f/assets/png/vdl.png"
+    src="https://cdn.jsdelivr.net/gh/varavelio/vdl@9cb843/assets/png/vdl.png"
     alt="VDL logo"
     width="130"
   />
@@ -19,6 +19,10 @@
   <a href="https://varavel.com/vdl">
     <img src="https://cdn.jsdelivr.net/gh/varavelio/brand@1.0.0/dist/badges/vdl-plugin.svg" alt="VDL Plugin"/>
   </a>
+</p>
+
+<p align="center">
+  Strictly follows <a href="https://vdl.varavel.com/docs/protocols/events/">VPP-4: Events</a>.
 </p>
 
 This plugin is event-focused.
@@ -44,7 +48,7 @@ const config = {
   version 1
   plugins [
     {
-      src "varavelio/vdl-plugin-go@v0.1.2"
+      src "varavelio/vdl-plugin-go@<version>" // Use a version from plugin releases
       schema "./schema.vdl"
       outDir "./events"
       options {
@@ -52,7 +56,7 @@ const config = {
       }
     }
     {
-      src "varavelio/vdl-plugin-events-go@v0.1.3"
+      src "varavelio/vdl-plugin-events-go@<version>" // Use a version from plugin releases
       schema "./schema.vdl"
       outDir "./events"
       options {
@@ -87,7 +91,7 @@ const config = {
   version 1
   plugins [
     {
-      src "varavelio/vdl-plugin-events-go@v0.1.3"
+      src "varavelio/vdl-plugin-events-go@<version>" // Use a version from plugin releases
       schema "./schema.vdl"
       outDir "./gen"
       options {
