@@ -1,7 +1,24 @@
 var __defProp = Object.defineProperty;
+var __defProps = Object.defineProperties;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
 var __getOwnPropNames = Object.getOwnPropertyNames;
+var __getOwnPropSymbols = Object.getOwnPropertySymbols;
 var __hasOwnProp = Object.prototype.hasOwnProperty;
+var __propIsEnum = Object.prototype.propertyIsEnumerable;
+var __defNormalProp = (obj, key, value) => key in obj ? __defProp(obj, key, { enumerable: true, configurable: true, writable: true, value }) : obj[key] = value;
+var __spreadValues = (a, b) => {
+  for (var prop in b || (b = {}))
+    if (__hasOwnProp.call(b, prop))
+      __defNormalProp(a, prop, b[prop]);
+  if (__getOwnPropSymbols)
+    for (var prop of __getOwnPropSymbols(b)) {
+      if (__propIsEnum.call(b, prop))
+        __defNormalProp(a, prop, b[prop]);
+    }
+  return a;
+};
+var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 var __export = (target, all) => {
   for (var name in all)
@@ -80,6 +97,27 @@ function getAnnotation(annotations, name) {
 }
 __name(getAnnotation, "getAnnotation");
 
+// node_modules/@varavel/vdl-plugin-sdk/dist/utils/ir/get-annotation-arg.js
+function getAnnotationArg(annotations, name) {
+  const anno = getAnnotation(annotations, name);
+  return anno === null || anno === void 0 ? void 0 : anno.argument;
+}
+__name(getAnnotationArg, "getAnnotationArg");
+
+// node_modules/@varavel/vdl-plugin-sdk/dist/utils/deprecations/get-deprecation-message.js
+function getDeprecationMessage(annotations) {
+  const argument = getAnnotationArg(annotations, "deprecated");
+  if ((argument === null || argument === void 0 ? void 0 : argument.kind) !== "string") return;
+  return argument.stringValue;
+}
+__name(getDeprecationMessage, "getDeprecationMessage");
+
+// node_modules/@varavel/vdl-plugin-sdk/dist/utils/deprecations/is-deprecated.js
+function isDeprecated(annotations) {
+  return getAnnotation(annotations, "deprecated") !== void 0;
+}
+__name(isDeprecated, "isDeprecated");
+
 // node_modules/@varavel/vdl-plugin-sdk/dist/utils/ir/unwrap-literal.js
 function unwrapLiteral(value) {
   return unwrapLiteralValue(value);
@@ -111,34 +149,133 @@ function unwrapLiteralValue(value) {
 }
 __name(unwrapLiteralValue, "unwrapLiteralValue");
 
-// src/types/type-resolver.ts
-function resolveType(typeRef, allTypes) {
-  if (typeRef.kind !== "type") {
-    return typeRef;
+// node_modules/@varavel/vdl-plugin-sdk/dist/utils/events/assert-valid-ir-for-events.js
+var EVENT_ANNOTATION_NAME = "event";
+function assertValidIrForEvents(ir) {
+  rejectEventOutsideTypes(ir);
+  const typesByName = /* @__PURE__ */ new Map();
+  for (const typeDef of ir.types) typesByName.set(typeDef.name, typeDef);
+  const events = [];
+  for (const typeDef of ir.types) {
+    const annotation = typeDef.annotations.find((item) => item.name === EVENT_ANNOTATION_NAME);
+    if (!annotation) continue;
+    events.push(validateEventType(typeDef, annotation.position, annotation.argument, typesByName));
   }
-  const typeDef = allTypes.find(
-    (candidate) => candidate.name === typeRef.typeName
+  events.sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0);
+  return events;
+}
+__name(assertValidIrForEvents, "assertValidIrForEvents");
+function rejectEventOutsideTypes(ir) {
+  for (const enumDef of ir.enums) {
+    const annotation = enumDef.annotations.find((item) => item.name === EVENT_ANNOTATION_NAME);
+    if (annotation) fail(`Annotation @event is only allowed on type declarations, found on enum ${JSON.stringify(enumDef.name)}.`, annotation.position);
+  }
+  for (const constant of ir.constants) {
+    const annotation = constant.annotations.find((item) => item.name === EVENT_ANNOTATION_NAME);
+    if (annotation) fail(`Annotation @event is only allowed on type declarations, found on constant ${JSON.stringify(constant.name)}.`, annotation.position);
+  }
+}
+__name(rejectEventOutsideTypes, "rejectEventOutsideTypes");
+function validateEventType(typeDef, annotationPosition, argument, typesByName) {
+  var _typeDef$typeRef$obje;
+  if (argument === void 0 || argument.kind !== "string") fail(`Type ${JSON.stringify(typeDef.name)} annotation @event must have a string subject template argument.`, annotationPosition);
+  const template = unwrapLiteral(argument);
+  if (typeof template !== "string") fail(`Type ${JSON.stringify(typeDef.name)} annotation @event must have a string subject template argument.`, annotationPosition);
+  assert(typeDef.typeRef.kind === "object", `Type ${JSON.stringify(typeDef.name)} is annotated with @event and must be an object type.`, typeDef.position);
+  const fields = (_typeDef$typeRef$obje = typeDef.typeRef.objectFields) !== null && _typeDef$typeRef$obje !== void 0 ? _typeDef$typeRef$obje : [];
+  const names = parseSubjectTemplate(typeDef.name, template, annotationPosition);
+  const seen = /* @__PURE__ */ new Set();
+  const placeholders = [];
+  for (const name of names) {
+    if (seen.has(name)) continue;
+    seen.add(name);
+    const field = fields.find((item) => item.name === name);
+    if (!field) fail(`Type ${JSON.stringify(typeDef.name)} annotation @event placeholder ${JSON.stringify(name)} does not match any payload field.`, annotationPosition);
+    if (field.optional) fail(`Type ${JSON.stringify(typeDef.name)} annotation @event placeholder ${JSON.stringify(name)} must reference only required fields.`, annotationPosition);
+    const primitiveType = resolvePrimitiveType(typeDef.name, field.typeRef, typesByName, annotationPosition);
+    if (!primitiveType) fail(`Type ${JSON.stringify(typeDef.name)} annotation @event placeholder ${JSON.stringify(name)} must reference only primitive fields.`, annotationPosition);
+    placeholders.push({
+      field: name,
+      primitiveType
+    });
+  }
+  return {
+    name: typeDef.name,
+    position: typeDef.position,
+    subjectTemplate: template,
+    placeholders
+  };
+}
+__name(validateEventType, "validateEventType");
+function parseSubjectTemplate(typeName, template, position) {
+  const names = [];
+  let index = 0;
+  while (index < template.length) {
+    const open = template.indexOf("{", index);
+    if (open === -1) break;
+    const close = template.indexOf("}", open + 1);
+    if (close === -1) fail(`Type ${JSON.stringify(typeName)} annotation @event subject template has an unclosed placeholder in its subject template.`, position);
+    const inner = template.slice(open + 1, close);
+    if (!isIdentifier(inner)) fail(`Type ${JSON.stringify(typeName)} annotation @event placeholder ${JSON.stringify(inner)} must be a top-level field name.`, position);
+    names.push(inner);
+    index = close + 1;
+  }
+  if (template.indexOf("}", index) !== -1) fail(`Type ${JSON.stringify(typeName)} annotation @event subject template has a stray closing brace in its subject template.`, position);
+  return names;
+}
+__name(parseSubjectTemplate, "parseSubjectTemplate");
+function isIdentifier(value) {
+  if (value.length === 0) return false;
+  if (!isAlpha(value.charCodeAt(0))) return false;
+  for (let i = 1; i < value.length; i += 1) if (!isAlphaNum(value.charCodeAt(i))) return false;
+  return true;
+}
+__name(isIdentifier, "isIdentifier");
+function isAlpha(code) {
+  return code >= 65 && code <= 90 || code >= 97 && code <= 122 || code === 95;
+}
+__name(isAlpha, "isAlpha");
+function isAlphaNum(code) {
+  return isAlpha(code) || code >= 48 && code <= 57;
+}
+__name(isAlphaNum, "isAlphaNum");
+function resolvePrimitiveType(typeName, typeRef, typesByName, position) {
+  const seen = /* @__PURE__ */ new Set();
+  let current = typeRef;
+  for (; ; ) {
+    if (current.kind === "primitive" && current.primitiveName) return current.primitiveName;
+    if (current.kind === "type" && current.typeName) {
+      if (seen.has(current.typeName)) fail(`Type ${JSON.stringify(typeName)} annotation @event has a circular type reference.`, position);
+      seen.add(current.typeName);
+      const target = typesByName.get(current.typeName);
+      if (!target) fail(`Type ${JSON.stringify(typeName)} annotation @event points to unknown type ${JSON.stringify(current.typeName)}.`, position);
+      current = target.typeRef;
+      continue;
+    }
+    return;
+  }
+}
+__name(resolvePrimitiveType, "resolvePrimitiveType");
+
+// src/events/collect-event-models.ts
+function collectEventModels(ir) {
+  const events = assertValidIrForEvents(ir);
+  const typesByName = new Map(
+    ir.types.map((typeDef) => [typeDef.name, typeDef])
   );
-  if (!typeDef) {
-    return typeRef;
-  }
-  return resolveType(typeDef.typeRef, allTypes);
+  return events.map((event) => {
+    const typeDef = typesByName.get(event.name);
+    const deprecated = isDeprecated(typeDef == null ? void 0 : typeDef.annotations);
+    const message = getDeprecationMessage(typeDef == null ? void 0 : typeDef.annotations);
+    return __spreadValues(__spreadProps(__spreadValues({}, event), {
+      isDeprecated: deprecated
+    }), message === void 0 ? {} : { deprecationMessage: message });
+  });
 }
-__name(resolveType, "resolveType");
-function isPrimitiveSubjectType(typeRef, allTypes) {
-  return resolveType(typeRef, allTypes).kind === "primitive";
-}
-__name(isPrimitiveSubjectType, "isPrimitiveSubjectType");
+__name(collectEventModels, "collectEventModels");
 
 // src/events/placeholders.ts
 var eventPlaceholderPattern = /\{([^{}]+)\}/g;
-function extractPlaceholderNames(subject) {
-  return listPlaceholderMatches(subject).map((match) => {
-    var _a2;
-    return (_a2 = match[1]) != null ? _a2 : "";
-  });
-}
-__name(extractPlaceholderNames, "extractPlaceholderNames");
 function listPlaceholderMatches(subject) {
   const matches = [];
   const pattern = new RegExp(eventPlaceholderPattern.source, "g");
@@ -151,105 +288,9 @@ function listPlaceholderMatches(subject) {
 }
 __name(listPlaceholderMatches, "listPlaceholderMatches");
 
-// src/events/collect-event-models.ts
-function collectEventModels(typeDefs) {
-  return typeDefs.map((typeDef) => toEventModel(typeDef, typeDefs)).filter((event) => event !== null);
-}
-__name(collectEventModels, "collectEventModels");
-function toEventModel(typeDef, allTypes) {
-  var _a2;
-  const eventAnnotation = getAnnotation(typeDef.annotations, "event");
-  if (!eventAnnotation) {
-    return null;
-  }
-  if (typeDef.typeRef.kind !== "object") {
-    fail(
-      `@event can only be used on object types, but "${typeDef.name}" is ${typeDef.typeRef.kind}.`,
-      typeDef.position
-    );
-  }
-  if (!eventAnnotation.argument) {
-    fail(
-      `@event on "${typeDef.name}" must include a routing subject string.`,
-      eventAnnotation.position
-    );
-  }
-  const subject = unwrapLiteral(eventAnnotation.argument);
-  if (typeof subject !== "string") {
-    fail(
-      `@event on "${typeDef.name}" must use a string literal subject.`,
-      eventAnnotation.position
-    );
-  }
-  const fields = (_a2 = typeDef.typeRef.objectFields) != null ? _a2 : [];
-  const fieldsByName = new Map(fields.map((field) => [field.name, field]));
-  const placeholders = extractPlaceholderNames(subject).map(
-    (placeholderName) => {
-      const field = fieldsByName.get(placeholderName);
-      if (!field) {
-        fail(
-          `Placeholder "${placeholderName}" must match a top-level field on "${typeDef.name}".`,
-          eventAnnotation.position
-        );
-      }
-      if (!isPrimitiveSubjectType(field.typeRef, allTypes)) {
-        fail(
-          `Placeholder "${placeholderName}" must reference a top-level primitive field on "${typeDef.name}".`,
-          field.position
-        );
-      }
-      return { name: placeholderName, field };
-    }
-  );
-  return {
-    name: typeDef.name,
-    subject,
-    placeholders
-  };
-}
-__name(toEventModel, "toEventModel");
-
 // src/go/render-go-type.ts
-function renderGoType(typeRef, optional, allTypes) {
-  const rendered = renderRequiredGoType(resolveType(typeRef, allTypes));
-  return optional ? `*${rendered}` : rendered;
-}
-__name(renderGoType, "renderGoType");
-function typeUsesTime(typeRef, allTypes) {
-  const resolved = resolveType(typeRef, allTypes);
-  return resolved.kind === "primitive" && resolved.primitiveName === "datetime";
-}
-__name(typeUsesTime, "typeUsesTime");
-function typeNeedsFmtSprint(typeRef, allTypes) {
-  const resolved = resolveType(typeRef, allTypes);
-  return !(resolved.kind === "primitive" && (resolved.primitiveName === "string" || resolved.primitiveName === "datetime"));
-}
-__name(typeNeedsFmtSprint, "typeNeedsFmtSprint");
-function renderSubjectValue(field, allTypes) {
-  const resolved = resolveType(field.typeRef, allTypes);
-  if (resolved.kind === "primitive" && resolved.primitiveName === "string") {
-    return field.name;
-  }
-  if (resolved.kind === "primitive" && resolved.primitiveName === "datetime") {
-    return `${field.name}.Format(time.RFC3339Nano)`;
-  }
-  return `fmt.Sprint(${field.name})`;
-}
-__name(renderSubjectValue, "renderSubjectValue");
-function renderRequiredGoType(typeRef) {
-  var _a2;
-  switch (typeRef.kind) {
-    case "primitive":
-      return primitiveToGoType((_a2 = typeRef.primitiveName) != null ? _a2 : "string");
-    default:
-      throw new Error(
-        `Only primitive placeholders are supported, got: ${typeRef.kind}`
-      );
-  }
-}
-__name(renderRequiredGoType, "renderRequiredGoType");
-function primitiveToGoType(name) {
-  switch (name) {
+function renderGoType(primitiveType) {
+  switch (primitiveType) {
     case "string":
       return "string";
     case "int":
@@ -261,15 +302,33 @@ function primitiveToGoType(name) {
     case "datetime":
       return "time.Time";
     default:
-      return name;
+      return primitiveType;
   }
 }
-__name(primitiveToGoType, "primitiveToGoType");
+__name(renderGoType, "renderGoType");
+function typeUsesTime(primitiveType) {
+  return primitiveType === "datetime";
+}
+__name(typeUsesTime, "typeUsesTime");
+function typeNeedsFmtSprint(primitiveType) {
+  return primitiveType !== "string" && primitiveType !== "datetime";
+}
+__name(typeNeedsFmtSprint, "typeNeedsFmtSprint");
+function renderSubjectValue(fieldName, primitiveType) {
+  if (primitiveType === "string") {
+    return fieldName;
+  }
+  if (primitiveType === "datetime") {
+    return `${fieldName}.Format(time.RFC3339Nano)`;
+  }
+  return `fmt.Sprint(${fieldName})`;
+}
+__name(renderSubjectValue, "renderSubjectValue");
 
 // src/go/render-go-file.ts
-function renderGoFile(packageName, events, allTypes) {
+function renderGoFile(packageName, events) {
   const lines = [`package ${packageName}`, ""];
-  const imports = collectImports(events, allTypes);
+  const imports = collectImports(events);
   if (imports.length > 0) {
     lines.push("import (");
     for (const importPath of imports) {
@@ -277,9 +336,9 @@ function renderGoFile(packageName, events, allTypes) {
     }
     lines.push(")", "");
   }
-  lines.push(...renderCatalog(events, allTypes), "");
+  lines.push(...renderCatalog(events), "");
   for (const [index, event] of events.entries()) {
-    lines.push(...renderSubjectBuilder(event, allTypes));
+    lines.push(...renderSubjectBuilder(event));
     if (index < events.length - 1) {
       lines.push("");
     }
@@ -288,16 +347,16 @@ function renderGoFile(packageName, events, allTypes) {
 `;
 }
 __name(renderGoFile, "renderGoFile");
-function collectImports(events, allTypes) {
+function collectImports(events) {
   const imports = [];
   const needsFmt = events.some(
     (event) => event.placeholders.some(
-      (placeholder) => typeNeedsFmtSprint(placeholder.field.typeRef, allTypes)
+      (placeholder) => typeNeedsFmtSprint(placeholder.primitiveType)
     )
   );
   const needsTime = events.some(
     (event) => event.placeholders.some(
-      (placeholder) => typeUsesTime(placeholder.field.typeRef, allTypes)
+      (placeholder) => typeUsesTime(placeholder.primitiveType)
     )
   );
   if (needsFmt) {
@@ -309,12 +368,22 @@ function collectImports(events, allTypes) {
   return imports;
 }
 __name(collectImports, "collectImports");
+function renderDeprecationLines(event, indent) {
+  var _a2;
+  if (!event.isDeprecated) {
+    return [];
+  }
+  const message = (_a2 = event.deprecationMessage) != null ? _a2 : "This event is deprecated.";
+  return [`${indent}//`, `${indent}// Deprecated: ${message}`];
+}
+__name(renderDeprecationLines, "renderDeprecationLines");
 function renderEventDocLines(event, indent) {
   return [
     `${indent}// ${event.name} is the metadata for the ${event.name} event.`,
     `${indent}//`,
     `${indent}//	// Name:    ${event.name}`,
-    `${indent}//	// Subject: ${event.subject}`
+    `${indent}//	// Subject: ${event.subjectTemplate}`,
+    ...renderDeprecationLines(event, indent)
   ];
 }
 __name(renderEventDocLines, "renderEventDocLines");
@@ -322,17 +391,17 @@ function renderFieldDocLines(event, indent) {
   return [
     `${indent}//`,
     `${indent}//	// Name:    ${event.name}`,
-    `${indent}//	// Subject: ${event.subject}`
+    `${indent}//	// Subject: ${event.subjectTemplate}`
   ];
 }
 __name(renderFieldDocLines, "renderFieldDocLines");
-function renderCatalog(events, allTypes) {
+function renderCatalog(events) {
   const lines = [
     "// VDLEventCatalogRegistry catalogs all @event-annotated types with their subject metadata and builders.",
     "type VDLEventCatalogRegistry struct {"
   ];
   for (const event of events) {
-    const params = renderSubjectParams(event, allTypes);
+    const params = renderSubjectParams(event);
     lines.push(...renderEventDocLines(event, "	"));
     lines.push(`	${event.name} struct {`);
     lines.push("		// Name is the name of this event.");
@@ -355,7 +424,7 @@ function renderCatalog(events, allTypes) {
     "var VDLEventCatalog = VDLEventCatalogRegistry{"
   );
   for (const event of events) {
-    const params = renderSubjectParams(event, allTypes);
+    const params = renderSubjectParams(event);
     lines.push(...renderEventDocLines(event, "	"));
     lines.push(`	${event.name}: struct {`);
     lines.push("		// Name is the name of this event.");
@@ -377,7 +446,7 @@ function renderCatalog(events, allTypes) {
       "		// SubjectTemplate is the subject template for this event."
     );
     lines.push(...renderFieldDocLines(event, "		"));
-    lines.push(`		SubjectTemplate: "${event.subject}",`);
+    lines.push(`		SubjectTemplate: "${event.subjectTemplate}",`);
     lines.push("		// BuildSubject builds the subject for this event.");
     lines.push(...renderFieldDocLines(event, "		"));
     lines.push(`		BuildSubject: build${event.name}Subject,`);
@@ -387,33 +456,38 @@ function renderCatalog(events, allTypes) {
   return lines;
 }
 __name(renderCatalog, "renderCatalog");
-function renderSubjectBuilder(event, allTypes) {
-  const params = renderSubjectParams(event, allTypes);
-  return [
-    `func build${event.name}Subject(${params}) string {`,
-    `	return ${renderSubjectParts(event, allTypes).join(" + ")}`,
-    "}"
+function renderSubjectBuilder(event) {
+  const params = renderSubjectParams(event);
+  const lines = [
+    `// build${event.name}Subject builds the subject for the ${event.name} event.`,
+    ...renderDeprecationLines(event, "")
   ];
+  lines.push(
+    `func build${event.name}Subject(${params}) string {`,
+    `	return ${renderSubjectParts(event).join(" + ")}`,
+    "}"
+  );
+  return lines;
 }
 __name(renderSubjectBuilder, "renderSubjectBuilder");
-function renderSubjectParams(event, allTypes) {
-  return uniquePlaceholders(event.placeholders).map((placeholder) => {
-    return `${placeholder.name} ${renderGoType(placeholder.field.typeRef, placeholder.field.optional, allTypes)}`;
+function renderSubjectParams(event) {
+  return event.placeholders.map((placeholder) => {
+    return `${placeholder.field} ${renderGoType(placeholder.primitiveType)}`;
   }).join(", ");
 }
 __name(renderSubjectParams, "renderSubjectParams");
-function renderSubjectParts(event, allTypes) {
+function renderSubjectParts(event) {
   var _a2, _b, _c;
   const parts = [];
   const placeholdersByName = new Map(
-    event.placeholders.map((placeholder) => [placeholder.name, placeholder])
+    event.placeholders.map((placeholder) => [placeholder.field, placeholder])
   );
   let cursor = 0;
-  for (const match of listPlaceholderMatches(event.subject)) {
+  for (const match of listPlaceholderMatches(event.subjectTemplate)) {
     const start = (_a2 = match.index) != null ? _a2 : 0;
     const raw = (_b = match[0]) != null ? _b : "";
     const placeholderName = (_c = match[1]) != null ? _c : "";
-    const literal = event.subject.slice(cursor, start);
+    const literal = event.subjectTemplate.slice(cursor, start);
     if (literal.length > 0) {
       parts.push(JSON.stringify(literal));
     }
@@ -421,27 +495,18 @@ function renderSubjectParts(event, allTypes) {
     if (!placeholder) {
       throw new Error(`Missing placeholder model for ${placeholderName}`);
     }
-    parts.push(renderSubjectValue(placeholder.field, allTypes));
+    parts.push(
+      renderSubjectValue(placeholder.field, placeholder.primitiveType)
+    );
     cursor = start + raw.length;
   }
-  const tail = event.subject.slice(cursor);
+  const tail = event.subjectTemplate.slice(cursor);
   if (tail.length > 0) {
     parts.push(JSON.stringify(tail));
   }
   return parts.length === 0 ? ['""'] : parts;
 }
 __name(renderSubjectParts, "renderSubjectParts");
-function uniquePlaceholders(placeholders) {
-  const seen = /* @__PURE__ */ new Set();
-  return placeholders.filter((placeholder) => {
-    if (seen.has(placeholder.name)) {
-      return false;
-    }
-    seen.add(placeholder.name);
-    return true;
-  });
-}
-__name(uniquePlaceholders, "uniquePlaceholders");
 
 // src/generate.ts
 var defaultOutFile = "events.go";
@@ -459,7 +524,7 @@ __name(resolveOutFile, "resolveOutFile");
 function generatePluginOutput(input) {
   const packageName = getOptionString(input.options, "package", "events");
   const outFile = resolveOutFile(input);
-  const events = collectEventModels(input.ir.types);
+  const events = collectEventModels(input.ir);
   if (events.length === 0) {
     return { files: [] };
   }
@@ -467,7 +532,7 @@ function generatePluginOutput(input) {
     files: [
       {
         path: outFile,
-        content: renderGoFile(packageName, events, input.ir.types)
+        content: renderGoFile(packageName, events)
       }
     ]
   };

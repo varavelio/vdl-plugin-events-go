@@ -21,7 +21,6 @@
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
     "@types/node": "26.6.5",
-    "@varavel/gen": "0.1.0",
     "@varavel/vdl": "0.5.0",
     "@varavel/vdl-plugin-sdk": "0.6.0",
     "dprint": "0.63.0",

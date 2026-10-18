@@ -4,13 +4,6 @@
 export const eventPlaceholderPattern = /\{([^{}]+)\}/g;
 
 /**
- * Extracts placeholder names from a VDL event subject in source order.
- */
-export function extractPlaceholderNames(subject: string): string[] {
-  return listPlaceholderMatches(subject).map((match) => match[1] ?? "");
-}
-
-/**
  * Lists raw placeholder regex matches in source order.
  */
 export function listPlaceholderMatches(subject: string): RegExpExecArray[] {

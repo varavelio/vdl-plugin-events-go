@@ -1,23 +1,11 @@
-import type { Field } from "@varavel/vdl-plugin-sdk";
+import type { ValidatedEvent } from "@varavel/vdl-plugin-sdk/utils/events";
 
 /**
- * Describes one `@event` declaration after validation and normalization.
+ * Validated event enriched with VPP-1 deprecation metadata.
  */
-export type EventModel = {
-  /** Payload type name used to name generated event artifacts. */
-  name: string;
-  /** Literal event subject template from the VDL schema. */
-  subject: string;
-  /** Ordered subject placeholders resolved against payload fields. */
-  placeholders: PlaceholderModel[];
-};
-
-/**
- * Describes one resolved subject placeholder for an event subject template.
- */
-export type PlaceholderModel = {
-  /** Placeholder token name without surrounding braces. */
-  name: string;
-  /** Payload field that supplies the placeholder value. */
-  field: Field;
+export type EventModel = ValidatedEvent & {
+  /** Whether the source type carries `@deprecated`. */
+  isDeprecated: boolean;
+  /** Human-readable deprecation message, when a string argument exists. */
+  deprecationMessage?: string;
 };

@@ -8,7 +8,8 @@ This project contains a VDL plugin written in TypeScript that is responsible for
 
 To create the plugin, we are using the VDL Plugin SDK. It is IMPERATIVE that you download and read the manual for using the SDK BEFORE starting ANY task, as it defines and explains many important things. It is also important that you use the manual information when writing tests or any utility code, as it contains helpers that should be used whenever possible to avoid duplicating code and keep the code of all VDL plugins in a similar way.
 
-VDL Plugin SDK manual URL (download and read it): https://vdl-plugin-sdk.varavel.com/llms.txt
+- VDL Plugin SDK manual URL (download and read it): https://vdl-plugin-sdk.varavel.com/llms.txt
+- VPP-4 Events: https://vdl.varavel.com/docs/protocols/events/index.md
 
 ## Maintaining this Document
 
@@ -25,5 +26,6 @@ When updating this document, do so with the context of the entire document in mi
 - This plugin only emits Go event artifacts for types annotated with `@event`; unannotated types are ignored.
 - Generated artifacts are limited to unexported subject builder functions and a `VDLEventCatalog` variable of type `VDLEventCatalogRegistry`. The catalog uses per-event anonymous structs with a fully typed `BuildSubject` field referencing each builder. Payload structs/types are intentionally out of scope for this plugin.
 - Generated output is consolidated into a single Go file, defaults to `events.go`, and can be renamed through the `outFile` option when it still ends in `.go`.
-- Validate `@event` placeholders against top-level primitive payload fields before emitting files so invalid schemas fail with plugin diagnostics.
+- Validate `@event` schemas with `assertValidIrForEvents` from SDK `utils/events`; enrich results with VPP-1 deprecation metadata via SDK `utils/deprecations` instead of custom IR parsing.
+- Surface `@deprecated` as Go `// Deprecated:` godoc on catalog entries and subject builders, preserving the optional message with a default fallback.
 - E2E fixtures should run `go build ./gen` after generation so the generated Go output is compile-checked, not just string-checked.

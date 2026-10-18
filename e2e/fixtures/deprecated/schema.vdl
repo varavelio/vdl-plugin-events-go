@@ -1,0 +1,17 @@
+@deprecated
+@event("auth.user_deleted.{userId}")
+type UserDeletedEvent {
+  userId string
+}
+
+@deprecated("Use UserCreatedV2 instead.")
+@event("auth.user_created.{userId}")
+type UserCreatedEvent {
+  userId string
+  email string
+}
+
+@event("system.ready")
+type SystemReadyEvent {
+  message string
+}

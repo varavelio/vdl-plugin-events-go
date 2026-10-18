@@ -32,7 +32,7 @@ function resolveOutFile(input: PluginInput): string {
 export function generatePluginOutput(input: PluginInput): PluginOutput {
   const packageName = getOptionString(input.options, "package", "events");
   const outFile = resolveOutFile(input);
-  const events = collectEventModels(input.ir.types);
+  const events = collectEventModels(input.ir);
 
   if (events.length === 0) {
     return { files: [] };
@@ -42,7 +42,7 @@ export function generatePluginOutput(input: PluginInput): PluginOutput {
     files: [
       {
         path: outFile,
-        content: renderGoFile(packageName, events, input.ir.types),
+        content: renderGoFile(packageName, events),
       },
     ],
   };

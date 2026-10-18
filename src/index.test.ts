@@ -380,9 +380,7 @@ describe("generate", () => {
 
     expect(output.files).toEqual([]);
     expect(output.errors).toHaveLength(1);
-    expect(output.errors?.[0]?.message).toContain(
-      "@event can only be used on object types",
-    );
+    expect(output.errors?.[0]?.message).toContain("must be an object type");
   });
 
   it("returns a diagnostic when @event is missing its subject argument", () => {
@@ -402,7 +400,7 @@ describe("generate", () => {
     expect(output.files).toEqual([]);
     expect(output.errors).toHaveLength(1);
     expect(output.errors?.[0]?.message).toContain(
-      "must include a routing subject string",
+      "must have a string subject template argument",
     );
   });
 
@@ -425,7 +423,7 @@ describe("generate", () => {
     expect(output.files).toEqual([]);
     expect(output.errors).toHaveLength(1);
     expect(output.errors?.[0]?.message).toContain(
-      "must use a string literal subject",
+      "must have a string subject template argument",
     );
   });
 
@@ -471,7 +469,7 @@ describe("generate", () => {
     expect(output.files).toEqual([]);
     expect(output.errors).toHaveLength(1);
     expect(output.errors?.[0]?.message).toContain(
-      'Placeholder "tenantId" must match a top-level field',
+      'placeholder "tenantId" does not match any payload field',
     );
   });
 
@@ -498,7 +496,7 @@ describe("generate", () => {
     expect(output.files).toEqual([]);
     expect(output.errors).toHaveLength(1);
     expect(output.errors?.[0]?.message).toContain(
-      'Placeholder "user.id" must match a top-level field',
+      'placeholder "user.id" must be a top-level field name',
     );
   });
 
@@ -540,8 +538,74 @@ describe("generate", () => {
       expect(output.files).toEqual([]);
       expect(output.errors).toHaveLength(1);
       expect(output.errors?.[0]?.message).toContain(
-        'Placeholder "subjectPart" must reference a top-level primitive field',
+        'placeholder "subjectPart" must reference only primitive fields',
       );
     },
   );
+
+  it("emits godoc deprecation notices for deprecated events", () => {
+    const output = generateFromSchema(
+      { package: "events" },
+      schema({
+        types: [
+          typeDef(
+            "OldEvent",
+            objectType([field("userId", primitiveType("string"))]),
+            {
+              annotations: [
+                createEventAnnotation("auth.old.{userId}"),
+                annotation("deprecated", stringLiteral("Use NewEvent.")),
+              ],
+            },
+          ),
+        ],
+      }),
+    );
+
+    const file = getOnlyGeneratedFile(output);
+    expect(file.content).toContain("// Deprecated: Use NewEvent.");
+  });
+
+  it("emits a default godoc notice when deprecated without a message", () => {
+    const output = generateFromSchema(
+      { package: "events" },
+      schema({
+        types: [
+          typeDef(
+            "LegacyEvent",
+            objectType([field("userId", primitiveType("string"))]),
+            {
+              annotations: [
+                createEventAnnotation("auth.legacy.{userId}"),
+                annotation("deprecated"),
+              ],
+            },
+          ),
+        ],
+      }),
+    );
+
+    const file = getOnlyGeneratedFile(output);
+    expect(file.content).toContain("// Deprecated: This event is deprecated.");
+  });
+
+  it("omits godoc deprecation notices for active events", () => {
+    const output = generateFromSchema(
+      { package: "events" },
+      schema({
+        types: [
+          typeDef(
+            "ActiveEvent",
+            objectType([field("userId", primitiveType("string"))]),
+            {
+              annotations: [createEventAnnotation("auth.active.{userId}")],
+            },
+          ),
+        ],
+      }),
+    );
+
+    const file = getOnlyGeneratedFile(output);
+    expect(file.content).not.toContain("Deprecated:");
+  });
 });

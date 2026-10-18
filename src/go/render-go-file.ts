@@ -1,6 +1,5 @@
-import type { TypeDef } from "@varavel/vdl-plugin-sdk";
 import { listPlaceholderMatches } from "../events/placeholders";
-import type { EventModel, PlaceholderModel } from "../models/event-model";
+import type { EventModel } from "../models/event-model";
 import {
   renderGoType,
   renderSubjectValue,
@@ -14,10 +13,9 @@ import {
 export function renderGoFile(
   packageName: string,
   events: EventModel[],
-  allTypes: TypeDef[],
 ): string {
   const lines: string[] = [`package ${packageName}`, ""];
-  const imports = collectImports(events, allTypes);
+  const imports = collectImports(events);
 
   if (imports.length > 0) {
     lines.push("import (");
@@ -27,10 +25,10 @@ export function renderGoFile(
     lines.push(")", "");
   }
 
-  lines.push(...renderCatalog(events, allTypes), "");
+  lines.push(...renderCatalog(events), "");
 
   for (const [index, event] of events.entries()) {
-    lines.push(...renderSubjectBuilder(event, allTypes));
+    lines.push(...renderSubjectBuilder(event));
 
     if (index < events.length - 1) {
       lines.push("");
@@ -43,17 +41,17 @@ export function renderGoFile(
 /**
  * Collects Go imports required by the generated event file.
  */
-function collectImports(events: EventModel[], allTypes: TypeDef[]): string[] {
+function collectImports(events: EventModel[]): string[] {
   const imports: string[] = [];
 
   const needsFmt = events.some((event) =>
     event.placeholders.some((placeholder) =>
-      typeNeedsFmtSprint(placeholder.field.typeRef, allTypes),
+      typeNeedsFmtSprint(placeholder.primitiveType),
     ),
   );
   const needsTime = events.some((event) =>
     event.placeholders.some((placeholder) =>
-      typeUsesTime(placeholder.field.typeRef, allTypes),
+      typeUsesTime(placeholder.primitiveType),
     ),
   );
 
@@ -69,6 +67,18 @@ function collectImports(events: EventModel[], allTypes: TypeDef[]): string[] {
 }
 
 /**
+ * Renders Go deprecation notice lines for a deprecated event.
+ */
+function renderDeprecationLines(event: EventModel, indent: string): string[] {
+  if (!event.isDeprecated) {
+    return [];
+  }
+
+  const message = event.deprecationMessage ?? "This event is deprecated.";
+  return [`${indent}//`, `${indent}// Deprecated: ${message}`];
+}
+
+/**
  * Renders the generated event catalog definitions with typed BuildSubject fields.
  */
 function renderEventDocLines(event: EventModel, indent: string): string[] {
@@ -76,7 +86,8 @@ function renderEventDocLines(event: EventModel, indent: string): string[] {
     `${indent}// ${event.name} is the metadata for the ${event.name} event.`,
     `${indent}//`,
     `${indent}//\t// Name:    ${event.name}`,
-    `${indent}//\t// Subject: ${event.subject}`,
+    `${indent}//\t// Subject: ${event.subjectTemplate}`,
+    ...renderDeprecationLines(event, indent),
   ];
 }
 
@@ -84,18 +95,18 @@ function renderFieldDocLines(event: EventModel, indent: string): string[] {
   return [
     `${indent}//`,
     `${indent}//\t// Name:    ${event.name}`,
-    `${indent}//\t// Subject: ${event.subject}`,
+    `${indent}//\t// Subject: ${event.subjectTemplate}`,
   ];
 }
 
-function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
+function renderCatalog(events: EventModel[]): string[] {
   const lines = [
     "// VDLEventCatalogRegistry catalogs all @event-annotated types with their subject metadata and builders.",
     "type VDLEventCatalogRegistry struct {",
   ];
 
   for (const event of events) {
-    const params = renderSubjectParams(event, allTypes);
+    const params = renderSubjectParams(event);
     lines.push(...renderEventDocLines(event, "\t"));
     lines.push(`\t${event.name} struct {`);
     lines.push("\t\t// Name is the name of this event.");
@@ -120,7 +131,7 @@ function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
   );
 
   for (const event of events) {
-    const params = renderSubjectParams(event, allTypes);
+    const params = renderSubjectParams(event);
     lines.push(...renderEventDocLines(event, "\t"));
     lines.push(`\t${event.name}: struct {`);
     lines.push("\t\t// Name is the name of this event.");
@@ -142,7 +153,7 @@ function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
       "\t\t// SubjectTemplate is the subject template for this event.",
     );
     lines.push(...renderFieldDocLines(event, "\t\t"));
-    lines.push(`\t\tSubjectTemplate: "${event.subject}",`);
+    lines.push(`\t\tSubjectTemplate: "${event.subjectTemplate}",`);
     lines.push("\t\t// BuildSubject builds the subject for this event.");
     lines.push(...renderFieldDocLines(event, "\t\t"));
     lines.push(`\t\tBuildSubject: build${event.name}Subject,`);
@@ -156,25 +167,27 @@ function renderCatalog(events: EventModel[], allTypes: TypeDef[]): string[] {
 /**
  * Renders one generated (unexported) Go subject builder for an event.
  */
-function renderSubjectBuilder(
-  event: EventModel,
-  allTypes: TypeDef[],
-): string[] {
-  const params = renderSubjectParams(event, allTypes);
-  return [
-    `func build${event.name}Subject(${params}) string {`,
-    `\treturn ${renderSubjectParts(event, allTypes).join(" + ")}`,
-    "}",
+function renderSubjectBuilder(event: EventModel): string[] {
+  const params = renderSubjectParams(event);
+  const lines = [
+    `// build${event.name}Subject builds the subject for the ${event.name} event.`,
+    ...renderDeprecationLines(event, ""),
   ];
+  lines.push(
+    `func build${event.name}Subject(${params}) string {`,
+    `\treturn ${renderSubjectParts(event).join(" + ")}`,
+    "}",
+  );
+  return lines;
 }
 
 /**
  * Renders the parameter list string for a subject builder function.
  */
-function renderSubjectParams(event: EventModel, allTypes: TypeDef[]): string {
-  return uniquePlaceholders(event.placeholders)
+function renderSubjectParams(event: EventModel): string {
+  return event.placeholders
     .map((placeholder) => {
-      return `${placeholder.name} ${renderGoType(placeholder.field.typeRef, placeholder.field.optional, allTypes)}`;
+      return `${placeholder.field} ${renderGoType(placeholder.primitiveType)}`;
     })
     .join(", ");
 }
@@ -182,18 +195,18 @@ function renderSubjectParams(event: EventModel, allTypes: TypeDef[]): string {
 /**
  * Renders the expression parts that compose one event subject string.
  */
-function renderSubjectParts(event: EventModel, allTypes: TypeDef[]): string[] {
+function renderSubjectParts(event: EventModel): string[] {
   const parts: string[] = [];
   const placeholdersByName = new Map(
-    event.placeholders.map((placeholder) => [placeholder.name, placeholder]),
+    event.placeholders.map((placeholder) => [placeholder.field, placeholder]),
   );
   let cursor = 0;
 
-  for (const match of listPlaceholderMatches(event.subject)) {
+  for (const match of listPlaceholderMatches(event.subjectTemplate)) {
     const start = match.index ?? 0;
     const raw = match[0] ?? "";
     const placeholderName = match[1] ?? "";
-    const literal = event.subject.slice(cursor, start);
+    const literal = event.subjectTemplate.slice(cursor, start);
 
     if (literal.length > 0) {
       parts.push(JSON.stringify(literal));
@@ -204,31 +217,16 @@ function renderSubjectParts(event: EventModel, allTypes: TypeDef[]): string[] {
       throw new Error(`Missing placeholder model for ${placeholderName}`);
     }
 
-    parts.push(renderSubjectValue(placeholder.field, allTypes));
+    parts.push(
+      renderSubjectValue(placeholder.field, placeholder.primitiveType),
+    );
     cursor = start + raw.length;
   }
 
-  const tail = event.subject.slice(cursor);
+  const tail = event.subjectTemplate.slice(cursor);
   if (tail.length > 0) {
     parts.push(JSON.stringify(tail));
   }
 
   return parts.length === 0 ? ['""'] : parts;
-}
-
-/**
- * Removes duplicate placeholders while preserving the first occurrence order.
- */
-function uniquePlaceholders(
-  placeholders: PlaceholderModel[],
-): PlaceholderModel[] {
-  const seen = new Set<string>();
-  return placeholders.filter((placeholder) => {
-    if (seen.has(placeholder.name)) {
-      return false;
-    }
-
-    seen.add(placeholder.name);
-    return true;
-  });
 }
